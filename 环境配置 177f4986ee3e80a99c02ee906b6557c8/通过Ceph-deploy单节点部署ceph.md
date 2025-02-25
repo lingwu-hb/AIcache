@@ -2,88 +2,6 @@
 
 本文档介绍如何在单机环境下使用ceph-deploy工具部署Ceph集群。主要包含以下核心步骤：
 
-## **1. 环境准备**
-
-1. 检查主机名和网络配置
-2. 创建工作目录: `mkdir -p ~/Proj/ceph-mycluster`
-3. 清理已存在配置(如需要): `sudo rm -rf /etc/ceph/* /var/lib/ceph/* /var/run/ceph/*`
-
-## **2. 基础配置**
-
-1. 创建集群配置: `ceph-deploy new [hostname]`
-2. 配置网络参数: 在ceph.conf中添加`public_network`配置
-3. 注意使用正确的网络掩码长度，可通过`ip a`命令查看
-
-## **3. 核心组件部署**
-
-### **3.1 Monitor节点**
-
-负责维护集群状态映射：
-
-1. 初始化监视器: `ceph-deploy mon create-initial`
-2. 配置管理密钥: `ceph-deploy admin [hostname]`
-
-### **3.2 Manager(MGR)节点**
-
-负责监控系统和性能指标收集：
-
-1. 部署MGR: `ceph-deploy mgr create [hostname]`
-2. 验证状态: `ceph -s`
-
-### **3.3 OSD节点**
-
-负责数据存储，采用以下配置优化性能：
-
-1. WAL分区(60GB): 用于预写日志，提升写入性能
-2. DB分区(180GB): 存储OSD元数据
-3. 数据分区(1TB): 存储实际数据
-
-### **3.4 RGW节点**
-
-提供对象存储服务：
-
-1. 部署RGW: `ceph-deploy rgw create [hostname]`
-2. 默认监听7480端口
-3. 支持S3兼容接口
-
-## **4. 存储配置**
-
-### **4.1 存储规划**
-
-1. 使用SSD配置WAL和DB分区，提升性能
-2. 使用HDD配置数据分区，提供大容量存储
-3. 通过LVM管理存储空间
-
-### **4.2 创建存储池**
-
-配置基本存储池：
-
-```bash
-# 允许单副本模式
-ceph config set global mon_allow_pool_size_one true
-
-# 创建存储池
-ceph osd pool create test_pool 256 256
-
-# 设置副本数
-ceph osd pool set test_pool size 1 --yes-i-really-mean-it
-```
-
-## **5. 验证部署**
-
-1. 检查集群状态: `ceph -s`
-2. 检查OSD树状态: `ceph osd tree`
-3. 验证RGW服务是否正常运行
-
-**注意事项：**
-
-- 部署前备份重要数据
-- 确保网络配置正确
-- 注意存储空间的合理分配
-- 建议在生产环境配置多副本和HTTPS
-
-# **Ceph 集群部署**
-
 ## **目录**
 
 1. 环境准备
@@ -531,55 +449,44 @@ services:
     - DB分区：180GB（用于存储OSD元数据）
 - 在HDD上创建数据分区：
     - 数据分区：1TB（用于存储实际数据）
+# 问题汇总
+客户端 ceph -s没反应
+关闭防火墙（双方 ）
+systemctl stop firewalld 
+systemctl disable firewalld 
+systemctl status firewalld
 
-## **其他**
+iostatu里：看不到nvme的流量，重启OSD
 
-lzq {~/Proj/ceph-mycluster} greetings, earthling [534.592kb]$ ☞ ceph -s
+2025年2月25日09:25:50：昨天RBD创建没反应，重启了Ceph，启动测试看不到IO；重装OSD，一直报错名称占用；ceph命令卡死，ceph -s没反应；
 
-cluster:
 
-id: 6d90cc37-4d25-4361-a744-2ff5c5ede0a8
+ ceph创建MON节点报错：[ceph_deploy.mon][WARNIN] mon.ceph1 monitor is not yet in quorum, tries left: 5
+[ceph1][DEBUG ] deploying mon to ceph1
+[ceph1][DEBUG ] remote hostname: ceph1
+[ceph1][DEBUG ] checking for done path: /var/lib/ceph/mon/ceph-ceph1/done
+[ceph1][INFO  ] Running command: systemctl enable ceph.target
+[ceph1][INFO  ] Running command: systemctl enable ceph-mon@ceph1
+[ceph1][INFO  ] Running command: systemctl start ceph-mon@ceph1
+[ceph1][INFO  ] Running command: ceph --cluster=ceph --admin-daemon /var/run/ceph/ceph-mon.ceph1.asok mon_status
+[ceph1][ERROR ] admin_socket: exception getting command descriptions: [Errno 2] No such file or directory
+[ceph1][WARNIN] monitor: mon.ceph1, might not be running yet
+[ceph1][INFO  ] Running command: ceph --cluster=ceph --admin-daemon /var/run/ceph/ceph-mon.ceph1.asok mon_status
+[ceph1][ERROR ] admin_socket: exception getting command descriptions: [Errno 2] No such file or directory
+[ceph1][WARNIN] monitor ceph1 does not exist in monmap
+[ceph_deploy.mon][INFO  ] processing monitor mon.ceph1
+[ceph1][DEBUG ] connected to host: ceph1 
+[ceph1][INFO  ] Running command: ceph --cluster=ceph --admin-daemon /var/run/ceph/ceph-mon.ceph1.asok mon_status
+[ceph1][ERROR ] admin_socket: exception getting command descriptions: [Errno 2] No such file or directory
+[ceph_deploy.mon][WARNIN] mon.ceph1 monitor is not yet in quorum, tries left: 5
 
-health: HEALTH_WARN
+暂时解决：
+ceph-deploy purge ceph1
+ceph-deploy purgedata ceph1（会调用yum删除ceph）
+sudo yum install ceph -y
 
-mon is allowing insecure global_id reclaim
+InvalidArgumentError('RADOS invalid argument (error calling conf_read_file)')
 
-Reduced data availability: 17 pgs inactive
-
-Degraded data redundancy: 32 pgs undersized
-
-1 pool(s) have no replicas configured
-
-OSD count 2 < osd_pool_default_size 3
-
-services:
-
-mon: 1 daemons, quorum AICache-3 (age 15m)
-
-mgr: AICache-3(active, since 2h)
-
-osd: 2 osds: 2 up (since 31m), 2 in (since 29m); 24 remapped pgs
-
-data:
-
-pools: 2 pools, 160 pgs
-
-objects: 0 objects, 0 B
-
-usage: 168 GiB used, 1.8 TiB / 2.0 TiB avail
-
-pgs: 10.625% pgs not active
-
-128 active+clean
-
-17 undersized+peered
-
-9 active+undersized
-
-6 active+undersized+remapped
-
-progress:
-
-Global Recovery Event (0s)
-
-[............................]
+ceph -s                                 
+Error initializing cluster client: InvalidArgumentError('RADOS invalid argument (error calling conf_read_file)')
+权限问题，从ceph new 重做
