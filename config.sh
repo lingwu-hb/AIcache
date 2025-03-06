@@ -1,4 +1,8 @@
 #!/bin/bash
+# 配置颜色输出
+INFO='\e[32m[INFO]\e[0m'
+ERROR='\e[31m[ERROR]\e[0m'
+WARNING='\e[33m[WARNING]\e[0m'
 
 # Base paths - can be overridden by environment variables
 # TODO: 修改为用户主目录
@@ -26,15 +30,15 @@ export VM_MEM=16
 export CPU_MASK="0x1000000000000000"
 
 # Result paths
-export RESULT_BASE="/root/fiotest" # in VM
-export COLLECTOR_BASE="${HOME_PATH}/spdk_fio/collectors"
+export RESULT_BASE_VM="/root/fiotest" # in VM
+export RESULT_BASE="${HOME_PATH}/AICache-tools"
 
 # Verify and create required directories
 create_required_dirs() {
     local dirs=(
-        "${HOME_PATH}/spdk_fio/result"
-        "${COLLECTOR_BASE}/cas_log"
-        "${COLLECTOR_BASE}/iostat"
+        "${RESULT_BASE}/rawfio"
+        "${RESULT_BASE}/cas_log"
+        "${RESULT_BASE}/iostat"
         "${SPDK_PATH}/log"
         "${SPDK_PATH}/trace_log"
     )
@@ -77,7 +81,7 @@ verify_tools() {
 
 # Print current configuration
 print_config() {
-    echo "Current configuration:"
+    echo -e "${INFO}Current configuration:"
     echo "HOME_PATH: ${HOME_PATH}"
     echo "SPDK_PATH: ${SPDK_PATH}"
     echo "TRACE_PATH: ${TRACE_PATH}"
