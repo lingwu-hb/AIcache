@@ -75,47 +75,59 @@ class OCFMonitor:
         # 1. 用于显示的格式化文本
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         display_output = []
-        display_output.append(f"时间: {timestamp}")
+        display_output.append("="*60)
+        display_output.append(f"时间: {timestamp}".center(60))
+        display_output.append("="*60)
         
         usage = stats["usage"]
         total_blocks = usage['occupancy']['count'] + usage['free']['count']
-        display_output.append("\n=== 缓存使用情况 ===")
-        display_output.append(f"总容量: {total_blocks} 个4KiB块")
-        display_output.append(f"已使用: {usage['occupancy']['count']} 块 ({usage['occupancy']['percentage']}%)")
-        display_output.append(f"脏数据: {usage['dirty']['count']} 块 ({usage['dirty']['percentage']}%)")
+        display_output.append("\n【缓存使用情况】")
+        display_output.append(f"{'总容量:':<15} {total_blocks:>10} 个4KiB块")
+        display_output.append(f"{'已使用:':<15} {usage['occupancy']['count']:>10} 块 ({usage['occupancy']['percentage']:>6.2f}%)")
+        display_output.append(f"{'脏数据:':<15} {usage['dirty']['count']:>10} 块 ({usage['dirty']['percentage']:>6.2f}%)")
         
         req = stats["requests"]
-        display_output.append("\n=== 请求统计 ===")
+        display_output.append("\n【请求统计】")
         display_output.append("读请求:")
-        display_output.append(f"  - 命中: {req['rd_hits']['count']} ({req['rd_hits']['percentage']}%)")
-        display_output.append(f"  - 部分未命中: {req['rd_partial_misses']['count']} ({req['rd_partial_misses']['percentage']}%)")
-        display_output.append(f"  - 完全未命中: {req['rd_full_misses']['count']} ({req['rd_full_misses']['percentage']}%)")
-        display_output.append(f"  - 直通: {req['rd_pt']['count']}")
+        display_output.append(f"  {'命中:':<15} {req['rd_hits']['count']:>10} ({req['rd_hits']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'部分未命中:':<15} {req['rd_partial_misses']['count']:>10} ({req['rd_partial_misses']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'完全未命中:':<15} {req['rd_full_misses']['count']:>10} ({req['rd_full_misses']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'直通:':<15} {req['rd_pt']['count']:>10}")
+        
         display_output.append("写请求:")
-        display_output.append(f"  - 命中: {req['wr_hits']['count']} ({req['wr_hits']['percentage']}%)")
-        display_output.append(f"  - 完全未命中: {req['wr_full_misses']['count']} ({req['wr_full_misses']['percentage']}%)")
-        display_output.append(f"  - 直通: {req['wr_pt']['count']} ({req['wr_pt']['percentage']}%)")
+        display_output.append(f"  {'命中:':<15} {req['wr_hits']['count']:>10} ({req['wr_hits']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'部分未命中:':<15} {req['wr_partial_misses']['count']:>10} ({req['wr_partial_misses']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'完全未命中:':<15} {req['wr_full_misses']['count']:>10} ({req['wr_full_misses']['percentage']:>6.2f}%)")
+        display_output.append(f"  {'直通:':<15} {req['wr_pt']['count']:>10} ({req['wr_pt']['percentage']:>6.2f}%)")
 
         blocks = stats["blocks"]
-        display_output.append("\n=== 块统计 ===")
+        display_output.append("\n【块统计】")
         display_output.append("核心卷:")
-        display_output.append(f"  - 读: {blocks['core_volume_rd']['count']} 块")
-        display_output.append(f"  - 写: {blocks['core_volume_wr']['count']} 块")
+        display_output.append(f"  {'读:':<15} {blocks['core_volume_rd']['count']:>10} 块")
+        display_output.append(f"  {'写:':<15} {blocks['core_volume_wr']['count']:>10} 块")
         display_output.append("缓存卷:")
-        display_output.append(f"  - 读: {blocks['cache_volume_rd']['count']} 块")
-        display_output.append(f"  - 写: {blocks['cache_volume_wr']['count']} 块")
+        display_output.append(f"  {'读:':<15} {blocks['cache_volume_rd']['count']:>10} 块")
+        display_output.append(f"  {'写:':<15} {blocks['cache_volume_wr']['count']:>10} 块")
 
         errors = stats["errors"]
-        total_errors = errors["total"]["count"]
-        display_output.append("\n=== 错误统计 ===")
-        if total_errors > 0:
-            display_output.append(f"总错误数: {total_errors}")
-            display_output.append(f"核心卷错误: {errors['core_volume_total']['count']}")
-            display_output.append(f"缓存卷错误: {errors['cache_volume_total']['count']}")
+        display_output.append("\n【错误统计】")
+        if errors["total"]["count"] > 0:
+            display_output.append(f"{'总错误数:':<15} {errors['total']['count']:>10}")
+            display_output.append(f"{'核心卷错误:':<15} {errors['core_volume_total']['count']:>10}")
+            display_output.append(f"{'缓存卷错误:':<15} {errors['cache_volume_total']['count']:>10}")
+            # 详细错误信息
+            if errors.get("core_volume_rd", {}).get("count", 0) > 0:
+                display_output.append(f"{'核心卷读错误:':<15} {errors['core_volume_rd']['count']:>10}")
+            if errors.get("core_volume_wr", {}).get("count", 0) > 0:
+                display_output.append(f"{'核心卷写错误:':<15} {errors['core_volume_wr']['count']:>10}")
+            if errors.get("cache_volume_rd", {}).get("count", 0) > 0:
+                display_output.append(f"{'缓存卷读错误:':<15} {errors['cache_volume_rd']['count']:>10}")
+            if errors.get("cache_volume_wr", {}).get("count", 0) > 0:
+                display_output.append(f"{'缓存卷写错误:':<15} {errors['cache_volume_wr']['count']:>10}")
         else:
             display_output.append("无错误")
 
-        display_output.append("\n" + "="*50 + "\n")
+        display_output.append("\n" + "="*60 + "\n")
 
         # 2. CSV格式数据
         csv_data = [
@@ -143,7 +155,7 @@ class OCFMonitor:
             blocks['core_volume_wr']['count'],
             blocks['cache_volume_rd']['count'],
             blocks['cache_volume_wr']['count'],
-            total_errors
+            errors["total"]["count"]
         ]
 
         return "\n".join(display_output), csv_data
