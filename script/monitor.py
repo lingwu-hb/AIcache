@@ -81,7 +81,7 @@ class OCFMonitor:
         
         usage = stats["usage"]
         total_blocks = usage['occupancy']['count'] + usage['free']['count']
-        display_output.append("\n【缓存使用情况】")
+        display_output.append("\n【缓存水位】")
         display_output.append(f"{'总容量:':<15} {total_blocks:>10} 个4KiB块")
         display_output.append(f"{'已使用:':<15} {usage['occupancy']['count']:>10} 块 ({usage['occupancy']['percentage']:>6.2f}%)")
         display_output.append(f"{'脏数据:':<15} {usage['dirty']['count']:>10} 块 ({usage['dirty']['percentage']:>6.2f}%)")

@@ -4,11 +4,6 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
-# 配置颜色输出
-INFO='\e[32m[INFO]\e[0m'
-ERROR='\e[31m[ERROR]\e[0m'
-WARNING='\e[33m[WARNING]\e[0m'
-
 # Command line arguments
 VM_NUM=$1
 PATTERN=$2
