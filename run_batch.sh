@@ -1,69 +1,79 @@
 #!/bin/bash
-# 配置颜色输出
-INFO='\e[32m[INFO]\e[0m'
-ERROR='\e[31m[ERROR]\e[0m'
-WARNING='\e[33m[WARNING]\e[0m'
-VM_NUM=$1
-PATTERN=$2                      # PATTERN：定义测试的模式或类型，例如"baseline"或"cache"。
-FIO_REPLAY_TRACE=$3             # FIO_REPLAY_TRACE：指定FIO测试的回放轨迹文件，用于模拟实际工作负载。
-TARGET_DISK=$4                  # TARGET_DISK：指定测试的目标磁盘设备，例如nvme0n1或vda。
-VM_TYPE=$5                      # VM_TYPE：定义虚拟机的类型，例如"kvm"或"xen"。
-TIME_STAMP=$(date "+%m%d_%H%M") # TIME_STAMP：生成当前时间戳，用于测试结果文件的命名，格式为%m%d_%H%M。
-HOME_PATH=/home/lzq             # HOME_PATH：用户主目录的路径，例如/home/lzq。
-SPDK_HOME=${HOME_PATH}/spdk     # SPDK_HOME：SPDK工具的安装路径，例如${HOME_PATH}/spdk。
-TEST_TYPE=$6                    # TEST_TYPE：定义测试的类型，例如"read"或"write"。
-CACHE_SIZE=$7
+# Source configuration
+SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+source ${SCRIPT_DIR}/config.sh
 
-# WARM_UP_SEC=300
-# RUN_SEC=600
+replay_trace_config=(
 
-fio_result_log="/root/fiotest/${VM_TYPE}_${PATTERN}_${FIO_REPLAY_TRACE}/${TIME_STAMP}"
-for ((i = 0; i < ${VM_NUM}; i++)); do
-	VM_LIST[$i]="vm$(printf "%02d" $(($i + 1)))"
-	VM_IP[$i]="192.168.122.$((201 + i))"
-	#	ssh root@${VM_LIST[$i]} "mkfs.ext4 ${TARGET_DISK}"
-	echo 3 >/proc/sys/vm/drop_caches
-	sshpass -p openEuler12#$ ssh root@${VM_IP[$i]} "echo 3 > /proc/sys/vm/drop_caches"
-	sshpass -p openEuler12#$ ssh root@${VM_IP[$i]} "mkdir -p ${fio_result_log}"
-	bash ${HOME_PATH}/spdk_scripts_replaytrace/run_fio_test.sh ${VM_IP[$i]} ${TARGET_DISK} ${PATTERN} ${FIO_REPLAY_TRACE} ${fio_result_log} ${TIME_STAMP} &
-done
+	# "ali-dev-3.txt 91"
+	"ali-dev-5.txt 91"
+	# "hm_0.txt 96"
+	"mds_1.txt 4300"
+	"prn_0.txt 193"
+	"proj_0.txt 91"
+	# "proj_3.txt 270"
+	#"prxy_0.txt 63"
+	"rsrch_0.txt 17"
+	#"rsrch_2.txt 68"
+	"src1_2.txt 81"
+	#"src2_0.txt 41"
+	# "src2_1.txt 981"
+	# "src2_2.txt 1040"
+	# "stg_1.txt 4075"
+	#"ts_0.txt 51"
+	# "usr_0.txt 109"
+	# "wdev_0.txt 41"
+	# "web_0.txt 369"
+	# "web_1.txt 188"
+	#"web_3.txt 46"
+	# "prn_1.txt 3779"
+	# "web_2.txt 3440"
+	#"proj_2.txt 20990"
+)
 
-sleep 10 # 等待fio进程跑起来
+algo_config=(
+	#"baseline" #不开缓存
+	#"ocf_nopf"
+	"ocf_seq_large"
+	#"ocf_seq"
+	#"seq_512"
+	#"seq_64_512"
+	#"seq_4reqlen"
+	#"seq_4reqlen_bind"
+	#"var_max"
+	#"fix_max_512"
+	#"fix_max_64"
 
-# 轮询等待所有FIO测试结束
-fio_test_numjobs=$(ps aux | grep "fio_result.log" | grep -v grep | wc -l)
-while [ $fio_test_numjobs -gt 0 ]; do
-	#sleep $(($WARM_UP_SEC+$RUN_SEC-50))
-	sleep 30
-	fio_test_numjobs=$(ps aux | grep "fio_result.log" | grep -v grep | wc -l)
-	while [ $fio_test_numjobs -gt 0 ]; do
-		sleep 10
-		fio_test_numjobs=$(ps aux | grep "fio_result.log" | grep -v grep | wc -l)
+	#"das-ori"
+	#"das-bind"
+	#"das-bind-adaptive"
+	#"das-bind-adaptive-64k"
+	#"das-bind-adaptive-64k-feedback"
+	#"das-bind-adaptive-64k-feedback-distance"
+	#"belief_io"
+	#"belief_page"
+	#"belief_ori"
+	#"belief_io_5552"
+	#"no_prefetch"
+	#"belief_io_5550"
+	# "belief_io_5553"
+	#"belief_io"
+	#"no_prefetch"
+	#"belief_io_10553"
+	#"no_prefetch"
+	#"belief_page_5550"
+	#"belief_page_10550"
+	#"belief_page_20550"
+	#"belief_page_30550"
+	#"no_prefetch"
+	#"das_belief"
+	#"seq_8"
+	#"seq_64_256"
+)
+#ocf_seq
+
+for algo in "${algo_config[@]}"; do
+	for relplay_trace in "${replay_trace_config[@]}"; do
+		sh start_vms_vfio.sh 1 ${algo} ${relplay_trace}
 	done
 done
-echo -e "${INFO}fio test finished"
-
-echo -e "${INFO}从虚拟机复制测试结果到主机"
-for ((i = 0; i < ${VM_NUM}; i++)); do
-	mkdir -p ${HOME_PATH}/spdk_fio/result/${PATTERN}+${FIO_REPLAY_TRACE}
-	sshpass -p openEuler12#$ scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${HOME_PATH}/spdk_fio/result/${PATTERN}+${FIO_REPLAY_TRACE}
-done
-
-# 收集缓存加速存储（CAS）日志和I/O统计
-COLLECTOR_DIR=${HOME_PATH}/spdk_fio/collectors
-mkdir -p ${COLLECTOR_DIR}/cas_log
-mkdir -p ${COLLECTOR_DIR}/iostat
-
-existing_cas=CAS1
-if [[ ${PATTERN} != baseline ]]; then
-	for cas in "${existing_cas[@]}"; do
-		# 收集CAS组件的统计信息
-		${SPDK_HOME}/scripts/rpc.py bdev_ocf_get_stats ${cas} >>${COLLECTOR_DIR}/cas_log/${PATTERN}_${FIO_REPLAY_TRACE}_${TIME_STAMP}_${cas}.json &
-	done
-	# 收集存储设备的I/O统计信息
-	${SPDK_HOME}/scripts/rpc.py bdev_get_iostat >>${COLLECTOR_DIR}/iostat/${PATTERN}_${FIO_REPLAY_TRACE}_${TIME_STAMP}_iostat.json &
-fi
-
-## env clean
-bash ${HOME_PATH}/spdk_scripts_replaytrace/stop_vms.sh ${VM_NUM}
-echo "env clean-up completed"
