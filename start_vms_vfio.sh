@@ -21,12 +21,24 @@ if [ $# != 4 ]; then
 fi
 
 # Initialize environment
-init_env
+init_env &>/dev/null
 
 echo -e "${INFO} 检查..."
+# 检查是否已经有SPDK进程
+if pgrep -f "nvmf_tgt" >/dev/null; then
+    echo -e "${ERROR} SPDK进程已存在"
+    exit 1
+fi
+
+# 检查是否有正在运行的测试虚拟机
+if virsh list | grep -q "vm0"; then
+    echo -e "${ERROR} 存在运行中的测试虚拟机"
+    exit 1
+fi
+
 # Validate VM number
 if [[ ${VM_NUM} -ne 1 && ${VM_NUM} -ne 5 ]]; then
-    echo "Invalid VM_NUM. Allowed values are 1 and 5."
+    echo -e "${ERROR} Invalid VM_NUM. Allowed values are 1 and 5."
     exit 1
 fi
 
@@ -39,7 +51,7 @@ fi
 
 # Check if cache device is system disk
 if echo "pvs" | grep -q "\<${CACHE_DEVICE}\>"; then
-    echo "${CACHE_DEVICE} is the system installation disk, exiting."
+    echo -e "${ERROR} ${CACHE_DEVICE} is the system installation disk"
     exit 1
 fi
 
@@ -48,14 +60,11 @@ systemctl stop ntpd
 ntpdate ceph1
 hwclock -w
 
-# check cluster health
-ceph_status=$(ceph -s)
-# check if there is anything wrong
+# Ceph 状态检查（只输出错误）
+ceph_status=$(ceph -s 2>/dev/null)
 if [[ $ceph_status == *"HEALTH_ERR"* ]]; then
-    echo "Cluster HEALTH_ERR, test exit。"
+    echo -e "${ERROR} Cluster health check failed"
     exit 1
-else
-    echo "Cluster Health is okay:)"
 fi
 
 # Prepare libdas.so based on pattern
@@ -99,12 +108,12 @@ fi
 
 # SPDK setup
 echo -e "${INFO} SPDK preparing..."
-${SPDK_PATH}/scripts/setup.sh cleanup
-sleep 3
-${SPDK_PATH}/scripts/setup.sh reset
-sleep 3
-${SPDK_PATH}/scripts/setup.sh
-sleep 3
+${SPDK_PATH}/scripts/setup.sh cleanup &>/dev/null
+sleep 2
+${SPDK_PATH}/scripts/setup.sh reset &>/dev/null
+sleep 2
+${SPDK_PATH}/scripts/setup.sh &>/dev/null
+sleep 2
 ${SPDK_PATH}/scripts/setup.sh status
 
 # Configure hugepages
@@ -134,24 +143,30 @@ else
 fi
 
 # 输出当前测试的配置信息
-echo -e "${INFO}Trace replay for prefetch test: ${PATTERN} ${FIO_REPLAY_TRACE} ${CACHE_SIZE}"
+echo -e "${INFO} ==================== Test Configuration ===================="
+echo -e "${INFO} Pattern:     ${PATTERN}"
+echo -e "${INFO} Trace File:  ${FIO_REPLAY_TRACE}"
+echo -e "${INFO} Cache Size:  ${CACHE_SIZE}MB"
+echo -e "${INFO} VM Count:    ${VM_NUM}"
+echo -e "${INFO} Cache Part:  ${CACHE_PARTITION}MB"
+echo -e "${INFO} ======================================================"
+
 # spdk/vfiouser process starting
-mkdir -p ${SPDK_PATH}/log
+mkdir -p ${RESULT_BASE}/log
 datetime=$(date "+%m%d_%H%M")
 nqnuuid=$(date "+%H%M")
 
 #LD_PRELOAD=/usr/lib/gcc/aarch64-linux-gnu/7.3.0/libasan.so
 
 #-e enable record trace
-cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/nvmf_tgt -e vbdev_ocf >${SPDK_PATH}/log/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
+cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/nvmf_tgt -e vbdev_ocf >${RESULT_BASE}/log/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
 #cd ${SPDK_HOME} &&  LD_LIBRARY_PATH=build/lib:dpdk/build/lib:./ build/bin/nvmf_tgt -m ${CPU_MASK} -e vbdev_ocf > log/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
 sleep 5
 
-#record trace
-mkdir -p ${SPDK_PATH}/trace_log
-spdk_pid=$(ps aux | grep nvmf_tgt | grep -v grep | awk '{print $2}')
-trace_log_file=
-cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/spdk_trace_record -q -s nvmf -p ${spdk_pid} -f ${SPDK_PATH}/trace_log/spdk_nvmf_record_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.trace &
+# #record trace
+# mkdir -p ${SPDK_PATH}/trace_log
+# spdk_pid=$(ps aux | grep nvmf_tgt | grep -v grep | awk '{print $2}')
+# cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/spdk_trace_record -q -s nvmf -p ${spdk_pid} -f ${SPDK_PATH}/trace_log/spdk_nvmf_record_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.trace &
 
 ${SPDK_PATH}/scripts/rpc.py log_set_level ERROR
 #./scripts/rpc.py log_set_level ERROR
@@ -214,27 +229,38 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     virsh start ${VM_LIST[$i]}
 done
 
-sleep 200
+# 等待虚拟机启动并检查SSH连接
+echo -e "${INFO} 等待虚拟机启动..."
+# sleep 60 # 基础等待时间
 
-# Wait for VMs to be ready
-for ((j = 0; j < ${#VM_LIST[@]}; j++)); do
-    max_attempts=20
-    attempt=1
-    while [[ $attempt -le $max_attempts ]]; do
-        if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$j]} "echo ssh_login_success"; then
-            echo -e "${INFO} VM ${VM_LIST[$j]} ssh login success"
+# # Wait for VMs to be ready
+# for ((j = 0; j < ${#VM_LIST[@]}; j++)); do
+#     max_attempts=20
+#     attempt=1
+#     while [[ $attempt -le $max_attempts ]]; do
+#         if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$j]} "echo ssh_login_success"; then
+#             echo -e "${INFO} VM ${VM_LIST[$j]} ssh login success"
+#             break
+#         else
+#             attempt=$((attempt + 1))
+#             sleep 5
+#         fi
+#     done
+#     if [[ $attempt -gt $max_attempts ]]; then
+#         echo -e "${ERROR} VM ${VM_LIST[$j]} ssh login failed"
+
+# 循环检查直到所有VM都就绪
+for ((i = 0; i < ${VM_NUM}; i++)); do
+    while true; do
+        if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$i]} "exit" 2>/dev/null; then
+            echo -e "${INFO} VM ${VM_LIST[$i]} 已就绪"
             break
-        else
-            attempt=$((attempt + 1))
-            sleep 5
         fi
+        echo -n "."
+        sleep 2
     done
-    if [[ $attempt -gt $max_attempts ]]; then
-        echo -e "${ERROR} VM ${VM_LIST[$j]} ssh login failed"
-        bash ${SCRIPT_DIR}/stop_vms.sh ${VM_NUM}
-        exit 1
-    fi
 done
+echo
 
 # Start FIO test
 if [[ ${VM_NUM} == 5 ]]; then

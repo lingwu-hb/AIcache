@@ -39,7 +39,6 @@ export FIO_PATH="${RESULT_BASE}/rawfio"
 export CSV_PATH="${RESULT_BASE}/csv"
 # export MYLOG= "${SPDK_PATH}/log"
 
-
 # Verify and create required directories
 create_required_dirs() {
     local dirs=(
@@ -51,9 +50,7 @@ create_required_dirs() {
     )
 
     for dir in "${dirs[@]}"; do
-        if [ ! -d "$dir" ]; then
-            mkdir -p "$dir"
-        fi
+        mkdir -p "$dir" 2>/dev/null
     done
 }
 
@@ -75,26 +72,32 @@ verify_spdk() {
 # Verify required tools
 verify_tools() {
     local required_tools=(virsh sshpass fio ceph)
+    local missing_tools=()
 
     for tool in "${required_tools[@]}"; do
         if ! command -v $tool &>/dev/null; then
-            echo "ERROR: Required tool '$tool' is not installed"
-            return 1
+            missing_tools+=($tool)
         fi
     done
 
+    if [ ${#missing_tools[@]} -ne 0 ]; then
+        echo -e "${ERROR} Missing required tools: ${missing_tools[*]}"
+        return 1
+    fi
     return 0
 }
 
 # Print current configuration
 print_config() {
-    echo -e "${INFO}Current configuration:"
-    echo "HOME_PATH: ${HOME_PATH}"
-    echo "SPDK_PATH: ${SPDK_PATH}"
-    echo "TRACE_PATH: ${TRACE_PATH}"
-    echo "VM_CONFIG_PATH: ${VM_CONFIG_PATH}"
-    echo "CACHE_DEVICE: ${CACHE_DEVICE}"
-    echo "RBD_POOL: ${RBD_POOL}"
+    echo -e "${INFO} Current configuration:"
+    printf "%-15s | %s\n" "Parameter" "Value"
+    printf "%-15s-+-%s\n" "$(printf '%.0s-' {1..15})" "$(printf '%.0s-' {1..50})"
+    printf "%-15s | %s\n" "HOME_PATH" "${HOME_PATH}"
+    printf "%-15s | %s\n" "SPDK_PATH" "${SPDK_PATH}"
+    printf "%-15s | %s\n" "TRACE_PATH" "${TRACE_PATH}"
+    printf "%-15s | %s\n" "VM_CONFIG_PATH" "${VM_CONFIG_PATH}"
+    printf "%-15s | %s\n" "CACHE_DEVICE" "${CACHE_DEVICE}"
+    printf "%-15s | %s\n" "RBD_POOL" "${RBD_POOL}"
 }
 
 # Initialize environment

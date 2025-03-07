@@ -1,91 +1,87 @@
 #!/bin/bash
+# Improved script for parsing FIO test results
+
+# Exit on any error
+set -e
+
 # Source configuration
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
+# Validate required variables
+if [[ -z "${FIO_PATH}" || -z "${CSV_PATH}" ]]; then
+    echo "Error: Required variables FIO_PATH or CSV_PATH not set in config.sh"
+    exit 1
+fi
 
 result_dir=${FIO_PATH}
 output_dir=${CSV_PATH}
 
-# 获取当前日期和时间（格式：YYYY-MM-DD_HH-MM-SS）
+# Get current timestamp and date
 timestamp=$(date +%Y-%m-%d_%H-%M-%S)
-
-# 获取当前日期（格式：YYYY-MM-DD），如果失败则使用默认值
 current_date=$(date +%Y-%m-%d 2>/dev/null || echo "unknown_date")
 
-# 在 output_dir 下创建日期子目录
+# Create date subdirectory in output_dir
 output_dir_with_date="$output_dir/$current_date"
 mkdir -p "$output_dir_with_date"
 
-# TODO: 考虑在文件名中增加使用的算法模式
-
-# 定义汇总的 CSV 文件路径
+# Define summary CSV file path
 summary_csv="$output_dir_with_date/result_${timestamp}.csv"
 
-# 初始化汇总 CSV 文件，写入表头
-echo "Trace,Cache Size,IOPS,BW(MiB/s)" > "$summary_csv"
+# Initialize summary CSV file with header
+echo "Trace,Cache Size,IOPS,BW(MiB/s),Timestamp" >"$summary_csv"
 
-# 定义 Trace 和缓存大小的映射关系
-declare -A replay_trace_config=(
-    ["ali-dev-3.txt"]="8200"
-    ["ali-dev-5.txt"]="91"
-    ["mds_1.txt"]="4864"
-    ["prn_0.txt"]="679"
-    ["proj_0.txt"]="167"
-    ["proj_3.txt"]="2261"
-    ["prxy_0.txt"]="213"
-    ["rsrch_0.txt"]="173"
-    ["rsrch_2.txt"]="799"
-    ["src1_2.txt"]="82"
-    ["src2_0.txt"]="161"
-    ["src2_1.txt"]="1736"
-    ["src2_2.txt"]="1736"
-    ["stg_1.txt"]="1039"
-    ["ts_0.txt"]="225"
-    ["usr_0.txt"]="109"
-    ["wdev_0.txt"]="120"
-    ["web_0.txt"]="348"
-    ["web_1.txt"]="695"
-    ["web_3.txt"]="1735"
-    ["prn_1.txt"]="3948"
-)
+# Define function to extract and process data
+process_fio_result() {
+    local file=$1
+    local summary_file=$2
 
-# 规范的目录结构为 /home/lzq/spdk_fio/result/8u16g_ocf_seq_large+ali-dev-5.txt/nvme0n1/fio_result.log
+    # Extract pattern and trace from path
+    local dir_path=$(dirname "$(dirname "$file")")
+    local pattern_fio=$(basename "$dir_path")
 
-# 遍历 result_dir 目录下的所有 fio_result.log 文件
-find "$result_dir" -name "fio_result.log" | while read -r file; do
-    # 提取 pattern 和 fio_replay_trace
-    dir_path=$(dirname "$(dirname "$file")")
-    pattern_fio=$(basename "$dir_path")
-    
-    # 从路径中提取 Trace 名称（支持 Trace 名称中包含下划线）
-    trace_name=$(echo "$pattern_fio" | grep -oP '[^+]+\.txt')
-    
-    # 获取对应的缓存大小
-    cache_sizes=${replay_trace_config[$trace_name]}
-    
-    # 如果没有找到对应的 Trace，跳过
-    if [[ -z "$cache_sizes" ]]; then
-        echo "Warning: No cache size found for Trace $trace_name in $file"
-        continue
+    # Extract trace name using pattern matching
+    local trace_name=$(echo "$pattern_fio" | grep -oP '[^+]+\.txt' || echo "unknown_trace")
+
+    # Skip if trace name couldn't be extracted
+    if [[ "$trace_name" == "unknown_trace" ]]; then
+        echo "Warning: Could not extract trace name from $pattern_fio"
+        return 1
     fi
-    
-    # 提取 IOPS 和 BW 的值
-    iops=$(grep -oP 'read: IOPS=\K[0-9.]+[kK]?' "$file")
-    bw=$(grep -oP 'read: IOPS=[0-9.]+[kK]?, BW=\K[0-9.]+' "$file")
 
-    # 处理 IOPS 的单位转换（将 K 转换为 1000）
-    if echo "$iops" | grep -qi 'k'; then
-        iops=$(echo "$iops" | sed 's/[kK]//g')
-        iops=$(echo "$iops * 1000" | bc)
+    # Extract CACHE_SIZE and TIMESTAMP from file metadata
+    local cache_size=""
+    local timestamp=""
+
+    # Try to extract metadata from file
+    if grep -q "# TEST_METADATA:" "$file"; then
+        cache_size=$(grep "# TEST_METADATA:" "$file" | grep -oP "CACHE_SIZE=\K[^,]+" || echo "")
+        timestamp=$(grep "# TEST_METADATA:" "$file" | grep -oP "TIMESTAMP=\K[^,\s]+" || echo "")
     fi
-    
-    # 将结果追加到汇总 CSV 文件
-    for cache_size in $cache_sizes; do
-        echo "$trace_name,$cache_size,$iops,$bw" >> "$summary_csv"
-    done
-    
-    echo "Processed $file"
+
+    # If no cache_size found, use "unknown"
+    if [[ -z "$cache_size" ]]; then
+        cache_size="unknown"
+        echo "Warning: No cache size found for $trace_name, using 'unknown'"
+    fi
+
+    # Extract IOPS and bandwidth
+    local iops=$(grep -oP "IOPS=\K[\d\.]+" "$file" | tail -1)
+    local bw=$(grep -oP "BW=\K[\d\.]+MiB/s" "$file" | sed 's/MiB\/s//' | tail -1)
+
+    # If extraction successful, write to summary CSV
+    if [[ -n "$iops" && -n "$bw" ]]; then
+        echo "$trace_name,$cache_size,$iops,$bw,$timestamp" >>"$summary_file"
+        echo "Processed: $trace_name (IOPS: $iops, BW: $bw MB/s, Cache Size: $cache_size, Timestamp: $timestamp)"
+    else
+        echo "Warning: Could not extract IOPS or BW from $file"
+    fi
+}
+
+# Process all FIO result files
+echo "Starting to process FIO result files..."
+find "$result_dir" -name "*_fio_result.log" | while read -r file; do
+    process_fio_result "$file" "$summary_csv"
 done
 
-echo "All files processed. Summary CSV saved to $summary_csv"
+echo "Processing complete. Results saved to $summary_csv"

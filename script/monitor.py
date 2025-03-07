@@ -13,6 +13,31 @@ from datetime import datetime
 import argparse
 import os
 import csv
+
+# 添加颜色输出类
+class ColorOutput:
+    """终端彩色输出"""
+    INFO = '\033[92m'      # 绿色
+    WARNING = '\033[93m'   # 黄色
+    ERROR = '\033[91m'     # 红色
+    ENDC = '\033[0m'       # 结束颜色
+    BOLD = '\033[1m'       # 粗体
+    
+    @staticmethod
+    def info(msg):
+        """打印信息"""
+        print(f"{ColorOutput.INFO}[INFO]{ColorOutput.ENDC} {msg}")
+        
+    @staticmethod
+    def warning(msg):
+        """打印警告"""
+        print(f"{ColorOutput.WARNING}[WARNING]{ColorOutput.ENDC} {msg}")
+        
+    @staticmethod
+    def error(msg):
+        """打印错误"""
+        print(f"{ColorOutput.ERROR}[ERROR]{ColorOutput.ENDC} {msg}")
+
 rpc_path = "/home/lzq/spdk/scripts/rpc.py" 
 
 class OCFMonitor:
@@ -64,7 +89,7 @@ class OCFMonitor:
             result = subprocess.run(cmd, capture_output=True, text=True)
             return json.loads(result.stdout)
         except Exception as e:
-            print(f"获取统计信息失败: {e}")
+            ColorOutput.error(f"获取统计信息失败: {e}")
             return None
 
     def format_stats(self, stats):
@@ -171,18 +196,19 @@ class OCFMonitor:
                 # 如果是新文件，写入表头
                 if not file_exists:
                     writer.writerow(self.headers)
+                    ColorOutput.info(f"创建新日志文件: {os.path.abspath(self.log_file)}")
                 # 写入数据行
                 if csv_data:
                     writer.writerow(csv_data)
         except Exception as e:
-            print(f"写入日志失败: {e}")
+            ColorOutput.error(f"写入日志失败: {e}")
 
     def monitor(self):
         """开始监控"""
-        print(f"开始监控OCF缓存 {self.cache_name}")
-        print(f"日志文件: {self.log_file}")
-        print(f"监控间隔: {self.interval}秒")
-        print("按Ctrl+C停止监控\n")
+        ColorOutput.info(f"开始监控OCF缓存: {self.cache_name}")
+        ColorOutput.info(f"日志文件路径: {os.path.abspath(self.log_file)}")
+        ColorOutput.info(f"监控间隔: {self.interval}秒")
+        print(f"{ColorOutput.BOLD}按Ctrl+C停止监控{ColorOutput.ENDC}\n")
 
         try:
             while True:
@@ -191,9 +217,13 @@ class OCFMonitor:
                     display_text, csv_data = self.format_stats(stats)
                     print(display_text)
                     self.write_log(csv_data)
+                else:
+                    ColorOutput.warning("获取统计信息失败")
                 time.sleep(self.interval)
         except KeyboardInterrupt:
-            print("\n监控已停止")
+            ColorOutput.info("\n监控已停止")
+        except Exception as e:
+            ColorOutput.error(f"发生错误: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="OCF缓存性能监控工具")
