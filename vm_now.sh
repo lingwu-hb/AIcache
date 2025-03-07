@@ -1,13 +1,11 @@
 #!/bin/bash
 # 手动测试
 # 该脚本会启动SPDK和QEMU
-
-# Source configuration
-SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-source ${SCRIPT_DIR}/config.sh
+set -x
 
 # 接管设备
-source ${SPDK_HOME}/scripts/setup.sh
+source ${HOME_PATH}/spdk/scripts/setup.sh
+cd ${HOME_PATH}/spdk
 
 # 分配大页
 echo 15000 >/sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
@@ -17,7 +15,7 @@ echo 5000 >/sys/devices/system/node/node3/hugepages/hugepages-2048kB/nr_hugepage
 
 sleep 1
 
-cd ${SPDK_HOME}
+
 
 ./scripts/rpc.py log_set_level ERROR
 ./scripts/rpc.py log_set_print_level ERROR
@@ -54,3 +52,5 @@ virsh start vm01
 
 # 把xml修改回脚本可用的
 sed -i 's#/var/run/cntrl#/var/run/vm01/cntrl#' "$XML_FILE"
+
+cd -
