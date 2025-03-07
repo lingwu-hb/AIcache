@@ -1,4 +1,10 @@
 #!/bin/bash
+
+# Source configuration
+SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+source ${SCRIPT_DIR}/config.sh
+
+
 # compare the two csv result file
 # 执行示例：sudo sh com_res.sh /home/hb/res_analyse/csv/2025-03-05/result_2025-03-05_18-44-17.csv 
 #                             /home/hb/res_analyse/csv/2025-03-05/result_2025-03-05_18-45-08.csv
@@ -11,9 +17,7 @@ fi
 # 定义输入文件和输出目录
 csv_file1="$1"
 csv_file2="$2"
-out_dir="/home/hb/res_analyse/csv"
-output_dir="${out_dir}/res_compare"
-mkdir -p "$output_dir"
+output_dir="${CSV_PATH}"
 
 # 定义输出文件名
 output_csv="$output_dir/com_$(basename "${csv_file1%.*}")_and_$(basename "${csv_file2%.*}").csv"
