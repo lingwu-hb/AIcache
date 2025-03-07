@@ -20,10 +20,7 @@ if [ $# != 4 ]; then
     exit 1
 fi
 
-# Initialize environment
-init_env &>/dev/null
-
-echo -e "${INFO} 检查..."
+echo -e "${INFO} 检查环境..."
 # 检查是否已经有SPDK进程
 if pgrep -f "nvmf_tgt" >/dev/null; then
     echo -e "${ERROR} SPDK进程已存在"
@@ -60,7 +57,7 @@ systemctl stop ntpd
 ntpdate ceph1
 hwclock -w
 
-# Ceph 状态检查（只输出错误）
+# Ceph 状态检查
 ceph_status=$(ceph -s 2>/dev/null)
 if [[ $ceph_status == *"HEALTH_ERR"* ]]; then
     echo -e "${ERROR} Cluster health check failed"
@@ -182,17 +179,19 @@ else
     ${SPDK_PATH}/scripts/rpc.py bdev_split_create -s ${CACHE_PARTITION} nvme0n1 1
 fi
 
-# vm ip config adn test routine list
+# 配置VM和测试环境
 rm -rf /var/run/vm*
 for ((i = 0; i < ${VM_NUM}; i++)); do
     VM_LIST[$i]="vm$(printf "%02d" $(($i + 1)))"
-    VM_IP[$i]="${VM_BASE_IP}.$((201 + i))"
-    # bdev preparing
+    VM_IP[$i]="${VM_BASE_IP}.$((${VM_START_IP} + i))"
+
+    # 准备bdev
     if [[ ${VM_NUM} == 5 ]]; then
         mkdir -p /var/run/${VM_LIST[$i]}
         ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
         ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * ($i + 1) - 1)) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1) - 1))) 512
         ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * (i + 1))) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1)))) 512
+
         if [[ ${PATTERN} == das ]]; then
             ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((2 * ($i + 1) - 1)) wt ${CACHE_DEVICE}p0 core$((2 * (i + 1) - 1)) --cache-line-size ${CACHE_LINE_SIZE}
             sleep 30
@@ -204,7 +203,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1) - 1))
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1)))
         else
-            echo -e "${ERROR} unsupport test pattern, exit"
+            echo -e "${ERROR} Unsupported test pattern, exit"
             exit 1
         fi
         ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
@@ -213,17 +212,19 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
         ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
         ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((i + 1)) ${RBD_POOL} vm01 512
         sleep 3
+
         if [[ ${PATTERN} == baseline ]]; then
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
         else
             ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
             echo -e "${INFO} wait for bdev_ocf_create"
-            sleep 30 # make sure bdev_ocf_create DONE !
+            sleep 30 # 确保bdev_ocf_create完成
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
         fi
         ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
     fi
-    # start vm
+
+    # 启动虚拟机
     virsh define ${VM_CONFIG_PATH}/${VM_LIST[$i]}.xml
     echo 3 >/proc/sys/vm/drop_caches
     virsh start ${VM_LIST[$i]}
@@ -262,9 +263,9 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 done
 echo
 
-# Start FIO test
+# 启动FIO测试
 if [[ ${VM_NUM} == 5 ]]; then
-    bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} nvme0n ${VM_TYPE} ${FIO_BS} ${FIO_RW} vfio ${CACHE_SIZE}
+    bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} nvme0n ${VM_TYPE} ${FIO_BS} ${FIO_RW} ${CACHE_SIZE}
 else
     bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} ${FIO_REPLAY_TRACE} nvme0n1 ${VM_TYPE} vfio ${CACHE_SIZE}
 fi
