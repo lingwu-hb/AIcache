@@ -32,12 +32,18 @@ rm -rf /var/run/vm0*
 for _process in nvmf vhost VFIOUSER collect_spdk_cache.sh fio_result.log; do
         pkill -f "${_process}" 2>/dev/null || true
 done
+# for _prosess in {nvmf,vhost,VFIOUSER,collect_spdk_cache.sh,fio_result.log};do
+#         ps aux | grep ${_prosess} | grep -v grep | awk '{print $2}' | xargs kill -9
+# done
+
 
 sleep 10
 
 # Clean up SPDK
 ${SPDK_PATH}/scripts/setup.sh cleanup
 ${SPDK_PATH}/scripts/setup.sh reset
+# 接管设备
+${SPDK_PATH}/scripts/setup.sh
 
 # Clean up cache device
 if [ -b "/dev/${CACHE_DEVICE}" ]; then
@@ -48,3 +54,5 @@ if [ -b "/dev/${CACHE_DEVICE}" ]; then
 fi
 
 echo "Environment cleanup completed"
+
+
