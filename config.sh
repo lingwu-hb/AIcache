@@ -31,7 +31,14 @@ export CPU_MASK="0x1000000000000000"
 
 # Result paths
 export RESULT_BASE_VM="/root/fiotest" # in VM
+
 export RESULT_BASE="${HOME_PATH}/AICache-tools"
+
+export FIO_PATH="${RESULT_BASE}/rawfio"
+
+export CSV_PATH="${RESULT_BASE}/csv"
+# export MYLOG= "${SPDK_PATH}/log"
+
 
 # Verify and create required directories
 create_required_dirs() {
