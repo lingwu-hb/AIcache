@@ -50,12 +50,21 @@ exec > >(tee -a "$log_file") 2>&1
 echo "===== 批量测试开始 $(date) ====="
 
 # 获取第一个trace和缓存大小用于初始启动
-read -r first_trace first_cache <<< "${replay_trace_config[0]}"
+read -r first_trace first_cache <<<"${replay_trace_config[0]}"
 
-# 首先启动虚拟机（只需一次），使用第一个trace的配置
-echo "启动虚拟机..."
+# 启动虚拟机并计时
+echo "启动环境..."
+start_time=$(date +%s)
 ${SCRIPT_DIR}/../start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
-sleep 20
+
+# 等待VM就绪
+vm_ip="${VM_BASE_IP}.$((200 + 1))"
+while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
+    elapsed=$(($(date +%s) - start_time))
+    echo -ne "\r等待VM就绪... ${elapsed}秒"
+    sleep 2
+done
+echo -e "\nVM已就绪，用时${elapsed}秒"
 
 # 标记第一次运行
 first_run=true
@@ -63,13 +72,13 @@ first_run=true
 # 算法循环
 for algo in "${algo_config[@]}"; do
     echo "===== 测试算法: $algo ====="
-    
+
     # Trace循环
     for replay_trace in "${replay_trace_config[@]}"; do
         # 解析trace和缓存大小
-        read -r trace_file cache_size <<< "$replay_trace"
+        read -r trace_file cache_size <<<"$replay_trace"
         echo "===== 测试: $trace_file (缓存: $cache_size) ====="
-        
+
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
             echo "重载SPDK磁盘..."
@@ -81,21 +90,21 @@ for algo in "${algo_config[@]}"; do
         else
             first_run=false
         fi
-        
+
         # 执行FIO测试
         echo "执行FIO测试..."
         ${SCRIPT_DIR}/../fio_vm_test.sh "$algo" "$trace_file" "$cache_size"
         test_status=$?
-        
+
         # 清理缓存
         echo "清理缓存..."
-        echo 3 > /proc/sys/vm/drop_caches
-        
+        echo 3 >/proc/sys/vm/drop_caches
+
         # 为每个VM清理缓存
-        for ((i=1; i<=VM_COUNT; i++)); do
-            sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.$((200+i)) "echo 3 > /proc/sys/vm/drop_caches"
+        for ((i = 1; i <= VM_COUNT; i++)); do
+            sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.$((200 + i)) "echo 3 > /proc/sys/vm/drop_caches"
         done
-        
+
         sleep 3
     done
 done

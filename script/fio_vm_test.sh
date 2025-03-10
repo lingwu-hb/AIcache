@@ -65,6 +65,4 @@ if [[ ${PATTERN} != baseline ]]; then
     ${SPDK_PATH}/scripts/rpc.py bdev_get_iostat >>${RESULT_BASE}/iostat/${PATTERN}_${FIO_REPLAY_TRACE}_${TIME_STAMP}_iostat.json &
 fi
 
-# 环境清理
-bash ${SCRIPT_DIR}/stop_vms.sh ${VM_NUM}
-echo -e "${INFO} 环境清理完成"
+echo -e "${INFO} 测试完成"

@@ -232,29 +232,12 @@ done
 
 # 等待虚拟机启动并检查SSH连接
 echo -e "${INFO} 等待虚拟机启动..."
-# sleep 60 # 基础等待时间
-
-# # Wait for VMs to be ready
-# for ((j = 0; j < ${#VM_LIST[@]}; j++)); do
-#     max_attempts=20
-#     attempt=1
-#     while [[ $attempt -le $max_attempts ]]; do
-#         if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$j]} "echo ssh_login_success"; then
-#             echo -e "${INFO} VM ${VM_LIST[$j]} ssh login success"
-#             break
-#         else
-#             attempt=$((attempt + 1))
-#             sleep 5
-#         fi
-#     done
-#     if [[ $attempt -gt $max_attempts ]]; then
-#         echo -e "${ERROR} VM ${VM_LIST[$j]} ssh login failed"
 
 # 循环检查直到所有VM都就绪
 for ((i = 0; i < ${VM_NUM}; i++)); do
     while true; do
         if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$i]} "exit" 2>/dev/null; then
-            echo -e "${INFO} VM ${VM_LIST[$i]} 已就绪"
+            echo -e "\n${INFO} VM ${VM_LIST[$i]} 已就绪"
             break
         fi
         echo -n "."
