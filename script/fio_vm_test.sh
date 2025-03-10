@@ -52,6 +52,8 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     for result_file in ${RESULT_BASE}/result/${PATTERN}+${FIO_REPLAY_TRACE}/*_fio_result.log; do
         if [ -f "$result_file" ]; then
             echo -e "\n# TEST_METADATA: CACHE_SIZE=${CACHE_SIZE}, TIMESTAMP=${TIME_STAMP}" >>"$result_file"
+            echo -e "${INFO} FIO结果写入到${result_file}"
+
         fi
     done
 done
@@ -64,5 +66,3 @@ if [[ ${PATTERN} != baseline ]]; then
     # 收集存储设备的I/O统计信息
     ${SPDK_PATH}/scripts/rpc.py bdev_get_iostat >>${RESULT_BASE}/iostat/${PATTERN}_${FIO_REPLAY_TRACE}_${TIME_STAMP}_iostat.json &
 fi
-
-echo -e "${INFO} 测试完成"
