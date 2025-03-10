@@ -49,9 +49,12 @@ exec > >(tee -a "$log_file") 2>&1
 
 echo "===== 批量测试开始 $(date) ====="
 
-# 首先启动虚拟机（只需一次）
+# 获取第一个trace和缓存大小用于初始启动
+read -r first_trace first_cache <<< "${replay_trace_config[0]}"
+
+# 首先启动虚拟机（只需一次），使用第一个trace的配置
 echo "启动虚拟机..."
-${SCRIPT_DIR}/../start_vms_vfio.sh $VM_COUNT
+${SCRIPT_DIR}/../start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 sleep 20
 
 # 标记第一次运行
@@ -67,7 +70,7 @@ for algo in "${algo_config[@]}"; do
         read -r trace_file cache_size <<< "$replay_trace"
         echo "===== 测试: $trace_file (缓存: $cache_size) ====="
         
-        # 对于首次运行，不需要重载磁盘
+        # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
             echo "重载SPDK磁盘..."
             python3 ${SCRIPT_DIR}/reload_spdk_disk.py --cache-size "$cache_size" --vm-ids "$VM_COUNT"
@@ -80,7 +83,9 @@ for algo in "${algo_config[@]}"; do
         fi
         
         # 执行FIO测试
+        echo "执行FIO测试..."
         ${SCRIPT_DIR}/../fio_vm_test.sh "$algo" "$trace_file" "$cache_size"
+        test_status=$?
         
         # 清理缓存
         echo "清理缓存..."
@@ -98,5 +103,11 @@ done
 # 测试完成后停止虚拟机
 echo "所有测试完成，停止虚拟机..."
 ${SCRIPT_DIR}/../stop_vms.sh
+
+# 生成测试报告
+if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then
+    echo "生成测试报告..."
+    python3 ${SCRIPT_DIR}/parse_fio.py
+fi
 
 echo "===== 批量测试结束 $(date) ====="
