@@ -30,11 +30,22 @@ def send_qemu_cmd(vm_id, cmd):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.connect(monitor_socket)
         sock.settimeout(5)
-        sock.recv(4096)  # 读取欢迎消息
+        
+        # 读取并显示欢迎消息
+        welcome = sock.recv(4096).decode('utf-8', errors='ignore')
+        print(welcome, end='', flush=True)
+        
+        # 发送命令并显示
+        print(f"(qemu) {cmd}")
         sock.sendall(f"{cmd}\n".encode('utf-8'))
+        
+        # 读取并显示响应
         response = sock.recv(4096).decode('utf-8', errors='ignore')
+        print(response, end='', flush=True)
         sock.close()
-        return "error" not in response.lower(), response
+        
+        # 仅在明确的错误情况下返回False
+        return not ("error" in response.lower() and "failed" in response.lower()), response
     except Exception as e:
         return False, str(e)
 
