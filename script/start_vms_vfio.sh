@@ -4,6 +4,9 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
+# ./script/start_vms_vfio.sh 1 "das-bind" "ali-dev-5.txt" "91"
+# 等待虚拟机启动完成，检查是否可以访问
+# sshpass -p "openEuler12#$" ssh -o StrictHostKeyChecking=no root@192.168.122.201 "echo 'VM is ready'"
 # Command line arguments
 VM_NUM=$1
 PATTERN=$2
