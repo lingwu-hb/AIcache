@@ -94,30 +94,12 @@ restart_spdk() {
     return 0
 }
 
-# 查询设备信息
-query_device_info() {
-    local vm_id=$1
-    echo "查询VM${vm_id}的设备信息..."
-    echo "=== 设备树 ==="
-    send_qemu_cmd $vm_id "info qtree"
-    echo -e "\n=== PCI设备 ==="
-    send_qemu_cmd $vm_id "info pci"
-    echo -e "\n=== 块设备 ==="
-    send_qemu_cmd $vm_id "info block"
-}
-
 # 重新加载磁盘
 reload_disk() {
     local vm_id=$1
     local cache_size=$2
     
     echo "处理 VM${vm_id}..."
-    
-    # 查询当前设备信息
-    query_device_info $vm_id
-    
-    # 等待用户确认是否继续
-    read -p "请确认设备名称并按Enter继续，或按Ctrl+C取消..."
     
     # 1. 卸载文件系统
     run_ssh $vm_id "umount /dev/nvme0n1 || true"

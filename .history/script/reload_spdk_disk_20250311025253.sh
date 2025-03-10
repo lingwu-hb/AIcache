@@ -98,12 +98,7 @@ restart_spdk() {
 query_device_info() {
     local vm_id=$1
     echo "查询VM${vm_id}的设备信息..."
-    echo "=== 设备树 ==="
     send_qemu_cmd $vm_id "info qtree"
-    echo -e "\n=== PCI设备 ==="
-    send_qemu_cmd $vm_id "info pci"
-    echo -e "\n=== 块设备 ==="
-    send_qemu_cmd $vm_id "info block"
 }
 
 # 重新加载磁盘

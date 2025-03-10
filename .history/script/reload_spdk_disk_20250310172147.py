@@ -65,7 +65,7 @@ def restart_spdk(cache_size): #TODO SPDK重启方法错误，参考start_vms_vfi
 def reload_disk(vm_id, cache_size):
     """重新加载VM中的磁盘"""
     # 1. 卸载文件系统
-    # run_ssh(vm_id, "umount /dev/nvme0n1 || true")
+    run_ssh(vm_id, "umount /dev/nvme0n1 || true")
     
     # 2. 从QEMU中移除设备
     success, response = send_qemu_cmd(vm_id, "device_del spdk_disk")
