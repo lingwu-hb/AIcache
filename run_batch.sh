@@ -73,7 +73,9 @@ algo_config=(
 )
 #ocf_seq
 
+# 算法循环
 for algo in "${algo_config[@]}"; do
+	# Trace循环
 	for relplay_trace in "${replay_trace_config[@]}"; do
 		sh start_vms_vfio.sh 1 ${algo} ${relplay_trace}
 	done

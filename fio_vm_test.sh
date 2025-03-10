@@ -20,6 +20,7 @@ TEST_TYPE=$6 # 定义测试的类型，例如"read"或"write"
 CACHE_SIZE=$7
 
 fio_result_log="${RESULT_BASE_VM}/${VM_TYPE}_${PATTERN}_${FIO_REPLAY_TRACE}/${TIME_STAMP}"
+# 虚拟机循环
 for ((i = 0; i < ${VM_NUM}; i++)); do
     VM_LIST[$i]="vm$(printf "%02d" $(($i + 1)))"
     VM_IP[$i]="${VM_BASE_IP}.$((${VM_START_IP} + i))"
