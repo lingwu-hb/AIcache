@@ -22,32 +22,19 @@ def run_cmd(cmd, shell=True):
 
 def send_qemu_cmd(vm_id, cmd):
     """发送命令到QEMU监控器"""
-    monitor_socket = f"/var/run/vm{vm_id:02d}/monitor.sock"
-    if not os.path.exists(monitor_socket):
-        return False, "监控器套接字不存在"
-        
-    try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect(monitor_socket)
-        sock.settimeout(5)
-        
-        # 读取并显示欢迎消息
-        welcome = sock.recv(4096).decode('utf-8', errors='ignore')
-        print(welcome, end='', flush=True)
-        
-        # 发送命令并显示
-        print(f"(qemu) {cmd}")
-        sock.sendall(f"{cmd}\n".encode('utf-8'))
-        
-        # 读取并显示响应
-        response = sock.recv(4096).decode('utf-8', errors='ignore')
-        print(response, end='', flush=True)
-        sock.close()
-        
-        # 仅在明确的错误情况下返回False
-        return not ("error" in response.lower() and "failed" in response.lower()), response
-    except Exception as e:
-        return False, str(e)
+    vm_name = f"vm{vm_id:02d}"
+    virsh_cmd = f"virsh qemu-monitor-command --hmp {vm_name} '{cmd}'"
+    success, stdout, stderr = run_cmd(virsh_cmd)
+    
+    if not success:
+        return False, stderr
+    
+    # 显示命令和响应
+    print(f"(qemu) {cmd}")
+    print(stdout, end='', flush=True)
+    
+    # 仅在明确的错误情况下返回False
+    return not ("error" in stdout.lower() and "failed" in stdout.lower()), stdout
 
 def run_ssh(vm_id, cmd):
     """在VM中运行SSH命令"""
@@ -58,7 +45,7 @@ def run_ssh(vm_id, cmd):
     ssh_cmd = f"sshpass -p '{vm_ssh_pass}' ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no root@{vm_ip} '{cmd}'"
     return run_cmd(ssh_cmd)[0]
 
-def restart_spdk(cache_size):
+def restart_spdk(cache_size): #TODO SPDK重启方法错误，参考start_vms_vfio.sh脚本 
     """重启SPDK进程并设置新的缓存大小"""
     spdk_path = os.environ.get("SPDK_PATH", "/home/lzq/spdk")
     
