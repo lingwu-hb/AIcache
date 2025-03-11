@@ -4,20 +4,26 @@ SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
 # 检查参数
-if [ $# -lt 7 ]; then
-    echo -e "${ERROR} 参数不足"
-    echo "Usage: $0 VM_NUM PATTERN FIO_REPLAY_TRACE TARGET_DISK VM_TYPE TEST_TYPE CACHE_SIZE"
+if [ $# -lt 4 ]; then
+    echo -e "${ERROR} 必须提供VM_NUM、PATTERN、FIO_REPLAY_TRACE和CACHE_SIZE参数"
+    echo "Usage: $0 VM_NUM PATTERN FIO_REPLAY_TRACE CACHE_SIZE [TARGET_DISK] [VM_TYPE] [TEST_TYPE]"
+    echo "必需参数:"
+    echo "  VM_NUM: 虚拟机数量"
+    echo "  PATTERN: 测试模式(baseline/cache等)"
+    echo "  FIO_REPLAY_TRACE: FIO回放轨迹文件"
+    echo "  CACHE_SIZE: 缓存大小(GB)"
     exit 1
 fi
 
+# 设置参数
 VM_NUM=$1
-PATTERN=$2          # 定义测试的模式或类型，例如"baseline"或"cache"
-FIO_REPLAY_TRACE=$3 # 指定FIO测试的回放轨迹文件，用于模拟实际工作负载
-TARGET_DISK=$4      # 指定测试的目标磁盘设备，例如nvme0n1或vda
-VM_TYPE=$5          # 定义虚拟机的类型，例如"kvm"或"xen"
+PATTERN=$2                  # 测试模式(必需)
+FIO_REPLAY_TRACE=$3         # FIO回放轨迹文件(必需)
+CACHE_SIZE=$4               # 缓存大小(必需)
+TARGET_DISK=${5:-"nvme0n1"} # 默认使用nvme0n1作为目标磁盘
+VM_TYPE=${6:-"kvm"}         # 默认使用KVM虚拟化
+TEST_TYPE=${7:-"read"}      # 默认使用read测试
 TIME_STAMP=$(date "+%m%d_%H%M")
-TEST_TYPE=$6 # 定义测试的类型，例如"read"或"write"
-CACHE_SIZE=$7
 
 fio_result_log="${RESULT_BASE_VM}/${VM_TYPE}_${PATTERN}_${FIO_REPLAY_TRACE}/${TIME_STAMP}"
 # 虚拟机循环
