@@ -1,4 +1,4 @@
-# Start
+# Quick Start
 
 1. 停止和清理环境:
 
@@ -93,58 +93,3 @@
       - 环境清泪`stop_vms.sh`停止所有虚拟机
 
 
-
-你遇到的问题是因为在使用 `<qemu:arg>` 直接指定设备时，`bus=pci.1` 这种写法并不正确。实际上，`bus` 参数需要指定 PCI 总线的地址，而不是 libvirt 中的别名（如 `pci.1`）。
-
-### 问题原因分析：
-- 在 libvirt XML 中，`pci.1` 是 libvirt 内部的别名（alias），而不是 QEMU 识别的 PCI 总线地址。
-- QEMU 命令行参数中，`bus=` 后面需要的是 PCI 总线的地址（例如 `bus=pcie.0` 或者 `bus=pcie.0`），而不是 libvirt 的 alias 名称。
-- 你当前的 XML 中，`pci.1` 对应的 PCI 总线地址为 `bus='0x00' slot='0x01' function='0x0'`。
-
-### 正确的解决方案：
-你需要明确指定 PCI 总线地址，而不是 libvirt 的别名。根据你的 XML 配置，`pci.1` 对应的 PCI 总线地址为 `bus=pcie.0,addr=0x1`。
-
-因此，正确的 QEMU 命令行参数应为：
-```xml
-<qemu:commandline>
-  <qemu:arg value='-device'/>
-  <qemu:arg value='vfio-user-pci,id=spdk_vfio,bus=pcie.0,addr=01.0,socket=/var/run/vm01/cntrl'/>
-</qemu:commandline>
-```
-
-但注意：`pcie-root`（即 `pcie.0`）本身不支持热插拔设备。你需要使用 `pcie-root-port` 才能支持热插拔。因此，正确的做法是将设备绑定到某个 `pcie-root-port` 上：
-
-例如，`pci.1` 对应的 PCI 总线地址为 `bus='0x00' slot='0x01' function='0x0'`，在 QEMU 中表示为 `bus=pcie.0,addr=01.0`。
-
-因此，正确的 QEMU 命令行参数应为：
-```xml
-<qemu:commandline>
-  <qemu:arg value='-device'/>
-  <qemu:arg value='vfio-user-pci,id=spdk_vfio,bus=pcie.0,addr=01.0,socket=/var/run/vm01/cntrl'/>
-```
-
-### 热插拔设备的推荐方式：
-- 建议使用 libvirt 的热插拔命令，而不是直接修改 XML 或 QEMU 命令行。
-- 使用 `virsh attach-device` 和 `virsh detach-device` 命令进行热插拔。
-
-例如，创建一个单独的 XML 文件（如 `spdk_device.xml`）：
-```xml
-<hostdev mode='subsystem' type='vfio-user'>
-  <source socket='/var/run/vm01/cntrl'/>
-  <address type='pci' domain='0x0000' bus='0x01' slot='0x00' function='0x0'/>
-</hostdev>
-```
-
-然后使用：
-```bash
-virsh attach-device vm01 spdk_device.xml --live
-```
-
-卸载时：
-```bash
-virsh detach-device vm01 spdk_device.xml --live
-```
-
-### 总结：
-- 你当前的问题是因为 QEMU 命令行中错误地使用了 libvirt 的别名，而不是实际的 PCI 总线地址。
-- 正确的做法是使用 QEMU 识别的 PCI 总线地址，或更推荐使用 libvirt 的热插拔命令进行设备管理。

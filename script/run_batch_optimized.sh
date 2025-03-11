@@ -30,13 +30,14 @@ replay_trace_config=(
     "web_3.txt 46"
     "prn_1.txt 3779"
     "web_2.txt 3440"
-    "proj_2.txt 20990"
-    "ali-dev-3.txt 8200"
+    # "proj_2.txt 20990"
+    # "ali-dev-3.txt 8200"
 )
 
 # 算法配置
 algo_config=(
     "das-bind"
+    "no-prefetch"
     # 可以根据需要添加更多的算法
 )
 
