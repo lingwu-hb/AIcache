@@ -4,9 +4,6 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
-# ./script/start_vms_vfio.sh 1 "das-bind" "ali-dev-5.txt" "91"
-# 等待虚拟机启动完成，检查是否可以访问
-# sshpass -p "openEuler12#$" ssh -o StrictHostKeyChecking=no root@192.168.122.201 "echo 'VM is ready'"
 # Command line arguments
 VM_NUM=$1
 PATTERN=$2
@@ -24,17 +21,6 @@ if [ $# != 4 ]; then
 fi
 
 echo -e "${INFO} 检查环境..."
-# 检查是否已经有SPDK进程
-if pgrep -f "nvmf_tgt" >/dev/null; then
-    echo -e "${ERROR} SPDK进程已存在"
-    exit 1
-fi
-
-# 检查是否有正在运行的测试虚拟机
-if virsh list | grep -q "vm0"; then
-    echo -e "${ERROR} 存在运行中的测试虚拟机"
-    exit 1
-fi
 
 # Validate VM number
 if [[ ${VM_NUM} -ne 1 && ${VM_NUM} -ne 5 ]]; then
@@ -149,7 +135,7 @@ echo -e "${INFO} Trace File:  ${FIO_REPLAY_TRACE}"
 echo -e "${INFO} Cache Size:  ${CACHE_SIZE}MB"
 echo -e "${INFO} VM Count:    ${VM_NUM}"
 echo -e "${INFO} Cache Part:  ${CACHE_PARTITION}MB"
-echo -e "${INFO} ======================================================"
+echo -e "${INFO} ============================================================"
 
 # spdk/vfiouser process starting
 mkdir -p ${RESULT_BASE}/log
@@ -220,8 +206,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
         else
             ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
-            echo -e "${INFO} wait for bdev_ocf_create"
-            sleep 30 # 确保bdev_ocf_create完成
+            sleep 3 # 确保bdev_ocf_create完成
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
         fi
         ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
