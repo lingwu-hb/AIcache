@@ -113,8 +113,8 @@ reload_disk() {
 
     echo "处理 VM${vm_id}..."
 
-    # 1. 卸载文件系统 不需要卸载,没挂载
-    # run_ssh $vm_id "umount /dev/nvme0n1 || true"
+    # 1. 卸载文件系统
+    run_ssh $vm_id "umount /dev/nvme0n1 || true"
 
     # 2. 从QEMU中移除设备
     if ! send_qemu_cmd $vm_id "device_del spdk_vfio"; then
