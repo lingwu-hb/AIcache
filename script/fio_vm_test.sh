@@ -11,7 +11,7 @@ if [ $# -lt 4 ]; then
     echo "  VM_NUM: 虚拟机数量"
     echo "  PATTERN: 测试模式(baseline/cache等)"
     echo "  FIO_REPLAY_TRACE: FIO回放轨迹文件"
-    echo "  CACHE_SIZE: 缓存大小(GB)"
+    echo "  CACHE_SIZE: 缓存大小(MB)"
     exit 1
 fi
 
