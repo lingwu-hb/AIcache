@@ -38,10 +38,24 @@
     <gic version='3'/>
   </features>
   <cpu mode='host-passthrough' check='none'>
-    <topology sockets='1' dies='1' cores='8' threads='1'/>
+    <topology sockets='1' dies='1' cores='8' threads='1'/> <!-- TODO 这里是不是应该写16线程-->
     <numa>
       <cell id='0' cpus='0-7' memory='33554432' unit='KiB' memAccess='shared'/>
     </numa>
+    
+    <!-- 添加 Hyper-V 兼容性选项 -->
+    <feature policy='require' name='hypervisor'/>
+    <feature policy='require' name='relaxed'/>
+    <feature policy='require' name='spinlocks'/>
+    <feature policy='require' name='vapic'/>
+    <feature policy='require' name='kvm_pv_time'/>
+    <!-- 如果需要指定 spinlock retries 的值，可以使用 qemu:commandline 来传递参数 -->
+    <qemu:commandline>
+      <qemu:arg value='-cpu'/>
+      <qemu:arg value='host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time'/>
+    </qemu:commandline>
+
+
   </cpu>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>

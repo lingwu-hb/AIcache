@@ -225,24 +225,42 @@ echo -e "${INFO} 轮询VM是否启动..."
 sleep 10 # 稍微等待一下让VM开始启动
 
 # set -x
-# TODO：这后面都默认只有一个VM了
-# 先检查是否可以连接
+# TODO: This is now only one VM by default
+# 先检查VM是否运行
 vm_name=${VM_LIST[0]}
-while ! virsh list --all | grep ${vm_name} ; do
+echo -e "${INFO} 等待VM进入运行状态..."
+while ! virsh list | grep -q "${vm_name}.*running"; do
     echo -n "."
     sleep 1
 done
+echo -e "\nVM已进入运行状态"
 
-sleep 60
+# 检查VM是否已经启动完成（通过console）
+echo -e "${INFO} 等待VM控制台就绪..."
+while ! virsh console ${vm_name} --force 2>/dev/null <<< '\n' | grep -q "login:"; do
+    echo -n "."
+    sleep 1
+done
+echo -e "\nVM控制台已就绪"
 
-echo -e "${INFO} 轮询VM是否可以SSH连接..."
+# TODO: 如果VM启动很慢，建议检查以下配置：
+# 1. VM的网络配置（/etc/sysconfig/network-scripts/）
+# 2. 是否开启了SSH自启动（systemctl is-enabled sshd）
+# 3. 是否存在DHCP延迟（检查/etc/sysconfig/network）
 
-# vm已经RUNNING，再检查SSH连接
+# 检查网络连通性
 vm_ip="${VM_BASE_IP}.$((200 + 1))"
+echo -e "${INFO} 等待网络连通..."
+while ! ping -c 1 -W 1 ${vm_ip} &>/dev/null; do
+    echo -n "."
+    sleep 1
+done
+echo -e "\n网络已连通"
+
+echo -e "${INFO} 等待SSH服务就绪..."
 while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
     echo -ne "\r等待SSH就绪... ${elapsed}秒"
     sleep 1
 done
-echo -e "\nVM已就绪，用时${elapsed}秒"
-
+echo -e "\nVM已完全就绪，用时${elapsed}秒"

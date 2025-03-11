@@ -94,7 +94,7 @@ for algo in "${algo_config[@]}"; do
 
         # 执行FIO测试
         echo "执行FIO测试..."
-        ${SCRIPT_DIR}/fio_vm_test.sh "$algo" "$trace_file" "$cache_size"
+        ${SCRIPT_DIR}/fio_vm_test.sh "$algo" "$trace_file" "$cache_size" # TODO 这里参数不足
         test_status=$?
 
         # 清理缓存
