@@ -113,11 +113,17 @@ reload_disk() {
 
     echo "处理 VM${vm_id}..."
 
+    # 查询当前设备信息
+    query_device_info $vm_id
+
+    # 等待用户确认是否继续
+    read -p "请确认设备名称并按Enter继续，或按Ctrl+C取消..."
+
     # 1. 卸载文件系统
-    # run_ssh $vm_id "umount /dev/nvme0n1 || true"
+    run_ssh $vm_id "umount /dev/nvme0n1 || true"
 
     # 2. 从QEMU中移除设备
-    if ! send_qemu_cmd $vm_id "device_del spdk_vfio"; then
+    if ! send_qemu_cmd $vm_id "device_del spdk_disk"; then
         echo "错误: 移除设备失败" >&2
         return 1
     fi
@@ -129,7 +135,7 @@ reload_disk() {
     fi
 
     # 4. 重新添加设备
-    if ! send_qemu_cmd $vm_id "device_add vfio-user-pci,id=spdk_vfio,socket=/var/run/vm${vm_id}/cntrl"; then
+    if ! send_qemu_cmd $vm_id "device_add vhost-user-blk-pci,id=spdk_disk,chardev=spdk_char"; then
         echo "错误: 添加设备失败" >&2
         return 1
     fi

@@ -98,46 +98,67 @@ restart_spdk() {
 query_device_info() {
     local vm_id=$1
     echo "查询VM${vm_id}的设备信息..."
-    echo "=== 设备树 ==="
-    send_qemu_cmd $vm_id "info qtree"
-    echo -e "\n=== PCI设备 ==="
-    send_qemu_cmd $vm_id "info pci"
-    echo -e "\n=== 块设备 ==="
-    send_qemu_cmd $vm_id "info block"
+    
+    # 获取设备信息
+    echo "=== 查找SPDK VFIOUSER设备 ==="
+    local device_info
+    device_info=$(send_qemu_cmd $vm_id "info qtree" | grep -A 10 "vfiouser")
+    if [ -n "$device_info" ]; then
+        echo "找到VFIOUSER设备:"
+        echo "$device_info"
+        # 尝试提取设备ID
+        local device_id
+        device_id=$(echo "$device_info" | grep "id =" | head -n1 | sed -n 's/.*id = "\([^"]*\)".*/\1/p')
+        if [ -n "$device_id" ]; then
+            echo -e "\n检测到SPDK设备ID: $device_id"
+            export SPDK_DEVICE_ID="$device_id"
+        fi
+    else
+        echo "未找到VFIOUSER设备，尝试查找其他块设备..."
+        send_qemu_cmd $vm_id "info block"
+    fi
 }
 
 # 重新加载磁盘
 reload_disk() {
     local vm_id=$1
     local cache_size=$2
-
+    
     echo "处理 VM${vm_id}..."
-
+    
+    # 查询当前设备信息
+    query_device_info $vm_id
+    
+    if [ -z "$SPDK_DEVICE_ID" ]; then
+        echo "错误: 无法确定SPDK设备ID" >&2
+        return 1
+    fi
+    
     # 1. 卸载文件系统
-    # run_ssh $vm_id "umount /dev/nvme0n1 || true"
-
+    run_ssh $vm_id "umount /dev/nvme0n1 || true"
+    
     # 2. 从QEMU中移除设备
-    if ! send_qemu_cmd $vm_id "device_del spdk_vfio"; then
+    if ! send_qemu_cmd $vm_id "device_del $SPDK_DEVICE_ID"; then
         echo "错误: 移除设备失败" >&2
         return 1
     fi
     sleep 2
-
+    
     # 3. 重启SPDK
     if ! restart_spdk $cache_size; then
         return 1
     fi
-
+    
     # 4. 重新添加设备
-    if ! send_qemu_cmd $vm_id "device_add vfio-user-pci,id=spdk_vfio,socket=/var/run/vm${vm_id}/cntrl"; then
+    if ! send_qemu_cmd $vm_id "device_add vhost-user-blk-pci,id=$SPDK_DEVICE_ID,chardev=spdk_char"; then
         echo "错误: 添加设备失败" >&2
         return 1
     fi
     sleep 2
-
+    
     # 5. 重新挂载文件系统
     run_ssh $vm_id "mount /dev/nvme0n1 /mnt || true"
-
+    
     echo "VM${vm_id} 处理完成"
     return 0
 }
