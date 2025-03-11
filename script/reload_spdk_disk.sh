@@ -44,14 +44,16 @@ virsh nodedev-detach $PCI_DEV
 cd ${SPDK_PATH}
 
 # 4. 删除现有SPDK配置
-./scripts/rpc.py nvmf_subsystem_remove_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
+# ./scripts/rpc.py nvmf_subsystem_remove_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
 ./scripts/rpc.py bdev_ocf_delete CAS1
-rm -rf /var/run/bar0 /var/run/cntrl
+# rm -rf /var/run/bar0 /var/run/cntrl
 
 # 5. 重新创建设备链
-./scripts/rpc.py bdev_nvme_attach_controller -b nvme0 -t PCIe -a ${PCI_ADDR}
+# ./scripts/rpc.py bdev_nvme_attach_controller -b nvme0 -t PCIe -a ${PCI_ADDR}
+# 0000:83:00.0
+./scripts/rpc.py bdev_split_delete nvme0n1
 ./scripts/rpc.py bdev_split_create -s ${CACHE_SIZE} nvme0n1 1
-./scripts/rpc.py bdev_rbd_create -b core1 vmdisk vm01 512
+# ./scripts/rpc.py bdev_rbd_create -b core1 vmdisk vm01 512
 ./scripts/rpc.py bdev_ocf_create CAS1 wt nvme0n1p0 core1 --cache-line-size 4
 
 # 6. 重新配置VFIO传输
