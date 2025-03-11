@@ -10,26 +10,26 @@ source ${SCRIPT_DIR}/config.sh
 replay_trace_config=(
     "ali-dev-5.txt 91"
     "hm_0.txt 96"
-    "mds_1.txt 4300"
-    "prn_0.txt 193"
-    "proj_0.txt 91"
-    "proj_3.txt 270"
-    "prxy_0.txt 63"
-    "rsrch_0.txt 17"
-    "rsrch_2.txt 68"
-    "src1_2.txt 81"
-    "src2_0.txt 41"
-    "src2_1.txt 981"
-    "src2_2.txt 1040"
-    "stg_1.txt 4075"
-    "ts_0.txt 51"
-    "usr_0.txt 109"
-    "wdev_0.txt 41"
-    "web_0.txt 369"
-    "web_1.txt 188"
-    "web_3.txt 46"
-    "prn_1.txt 3779"
-    "web_2.txt 3440"
+    # "mds_1.txt 4300"
+    # "prn_0.txt 193"
+    # "proj_0.txt 91"
+    # "proj_3.txt 270"
+    # "prxy_0.txt 63"
+    # "rsrch_0.txt 17"
+    # "rsrch_2.txt 68"
+    # "src1_2.txt 81"
+    # "src2_0.txt 41"
+    # "src2_1.txt 981"
+    # "src2_2.txt 1040"
+    # "stg_1.txt 4075"
+    # "ts_0.txt 51"
+    # "usr_0.txt 109"
+    # "wdev_0.txt 41"
+    # "web_0.txt 369"
+    # "web_1.txt 188"
+    # "web_3.txt 46"
+    # "prn_1.txt 3779"
+    # "web_2.txt 3440"
     # "proj_2.txt 20990"
     # "ali-dev-3.txt 8200"
 )
@@ -83,10 +83,10 @@ for algo in "${algo_config[@]}"; do
 
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
-            echo "重载SPDK磁盘..."
-            python3 ${SCRIPT_DIR}/reload_spdk_disk.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
+            echo -e "\n${INFO}调整cache size..."
+            python3 ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
             if [ $? -ne 0 ]; then
-                echo "重载磁盘失败，跳过此trace"
+                echo -e "\n${ERROR}调整cache size失败，跳过此trace"
                 continue
             fi
         else
@@ -113,7 +113,7 @@ done
 
 # 测试完成后停止虚拟机
 echo "所有测试完成，停止虚拟机..."
-${SCRIPT_DIR}/../stop_vms.sh
+${SCRIPT_DIR}/stop_vms.sh
 
 # 生成测试报告
 if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then
