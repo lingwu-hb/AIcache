@@ -27,12 +27,11 @@ done
 
 cd ${SPDK_PATH}
 
-# 删除OCF缓存设备
+# 删除缓存
 ./scripts/rpc.py bdev_ocf_delete CAS1
 
-# 重新创建分区和OCF缓存设备
-./scripts/rpc.py bdev_split_create -s ${CACHE_SIZE} nvme0n1 1
+# 创建缓存
 ./scripts/rpc.py bdev_ocf_create CAS1 wt nvme0n1p0 core1 --cache-line-size 4
 
-# 验证配置
+# 获取缓存统计信息
 ./scripts/rpc.py bdev_ocf_get_stats CAS1

@@ -27,12 +27,22 @@ done
 
 cd ${SPDK_PATH}
 
-# 删除OCF缓存设备
+
+# 删除现有设备
+./scripts/rpc.py nvmf_subsystem_remove_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
+./scripts/rpc.py nvmf_delete_subsystem nqn.2021-06.io.spdk:ctc_device1
 ./scripts/rpc.py bdev_ocf_delete CAS1
 
-# 重新创建分区和OCF缓存设备
+# 重新创建设备
 ./scripts/rpc.py bdev_split_create -s ${CACHE_SIZE} nvme0n1 1
+./scripts/rpc.py bdev_rbd_create -b core1 vmdisk vm01 512
 ./scripts/rpc.py bdev_ocf_create CAS1 wt nvme0n1p0 core1 --cache-line-size 4
 
-# 验证配置
+# 重新配置VFIO传输
+rm -rf /var/run/bar0 /var/run/cntrl
+./scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
+./scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1
+./scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
+
+# 获取缓存统计信息
 ./scripts/rpc.py bdev_ocf_get_stats CAS1
