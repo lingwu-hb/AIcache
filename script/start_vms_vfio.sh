@@ -240,9 +240,9 @@ while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChec
 done
 echo -e "\nVM已就绪，用时${elapsed}秒"
 
-# 启动FIO测试
-if [[ ${VM_NUM} == 5 ]]; then
-    bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} nvme0n ${VM_TYPE} ${FIO_BS} ${FIO_RW} ${CACHE_SIZE}
-else
-    bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} ${FIO_REPLAY_TRACE} nvme0n1 ${VM_TYPE} vfio ${CACHE_SIZE}
-fi
+# # 启动FIO测试
+# if [[ ${VM_NUM} == 5 ]]; then
+#     bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} nvme0n ${VM_TYPE} ${FIO_BS} ${FIO_RW} ${CACHE_SIZE}
+# else
+#     bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} ${FIO_REPLAY_TRACE} nvme0n1 ${VM_TYPE} vfio ${CACHE_SIZE}
+# fi
