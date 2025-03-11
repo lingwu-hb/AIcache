@@ -206,7 +206,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
         else
             ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
-            sleep 5 # 确保bdev_ocf_create完成
+            sleep 3 # 确保bdev_ocf_create完成
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
         fi
         ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
@@ -220,18 +220,24 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 done
 
 # 等待虚拟机启动并检查SSH连接
-echo -e "${INFO} 等待虚拟机启动..."
+echo -e "${INFO} 轮询VM是否启动..."
 
 sleep 10 # 稍微等待一下让VM开始启动
 
-# 先检查virsh console是否可连接
+# set -x
+# TODO：这后面都默认只有一个VM了
+# 先检查是否可以连接
 vm_name=${VM_LIST[0]}
-while ! virsh console ${vm_name} --force 2>/dev/null <<<'\n' | grep -q "Escape character is"; do
+while ! virsh list --all | grep ${vm_name} ; do
     echo -n "."
     sleep 1
 done
 
-# 再检查SSH连接
+sleep 60
+
+echo -e "${INFO} 轮询VM是否可以SSH连接..."
+
+# vm已经RUNNING，再检查SSH连接
 vm_ip="${VM_BASE_IP}.$((200 + 1))"
 while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
@@ -240,9 +246,3 @@ while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChec
 done
 echo -e "\nVM已就绪，用时${elapsed}秒"
 
-# # 启动FIO测试
-# if [[ ${VM_NUM} == 5 ]]; then
-#     bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} nvme0n ${VM_TYPE} ${FIO_BS} ${FIO_RW} ${CACHE_SIZE}
-# else
-#     bash ${SCRIPT_DIR}/fio_vm_test.sh ${VM_NUM} ${PATTERN} ${FIO_REPLAY_TRACE} nvme0n1 ${VM_TYPE} vfio ${CACHE_SIZE}
-# fi
