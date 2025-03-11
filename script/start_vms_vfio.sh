@@ -222,13 +222,20 @@ done
 # 等待虚拟机启动并检查SSH连接
 echo -e "${INFO} 等待虚拟机启动..."
 
-sleep 30
-# 循环检查直到所有VM都就绪
+sleep 10 # 稍微等待一下让VM开始启动
 
+# 先检查virsh console是否可连接
+vm_name=${VM_LIST[0]}
+while ! virsh console ${vm_name} --force 2>/dev/null <<<'\n' | grep -q "Escape character is"; do
+    echo -n "."
+    sleep 1
+done
+
+# 再检查SSH连接
 vm_ip="${VM_BASE_IP}.$((200 + 1))"
 while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
-    echo -ne "\r等待VM就绪... ${elapsed}秒"
+    echo -ne "\r等待SSH就绪... ${elapsed}秒"
     sleep 1
 done
 echo -e "\nVM已就绪，用时${elapsed}秒"
