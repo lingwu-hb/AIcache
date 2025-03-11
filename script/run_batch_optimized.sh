@@ -83,7 +83,7 @@ for algo in "${algo_config[@]}"; do
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
             echo "重载SPDK磁盘..."
-            python3 ${SCRIPT_DIR}/reload_spdk_disk.py --cache-size "$cache_size" --vm-ids "$VM_COUNT"
+            python3 ${SCRIPT_DIR}/reload_spdk_disk.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
             if [ $? -ne 0 ]; then
                 echo "重载磁盘失败，跳过此trace"
                 continue
@@ -94,7 +94,7 @@ for algo in "${algo_config[@]}"; do
 
         # 执行FIO测试
         echo "执行FIO测试..."
-        ${SCRIPT_DIR}/../fio_vm_test.sh "$algo" "$trace_file" "$cache_size"
+        ${SCRIPT_DIR}/fio_vm_test.sh "$algo" "$trace_file" "$cache_size"
         test_status=$?
 
         # 清理缓存
