@@ -4,9 +4,6 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
-# ./script/start_vms_vfio.sh 1 "das-bind" "ali-dev-5.txt" "91"
-# 等待虚拟机启动完成，检查是否可以访问
-# sshpass -p "openEuler12#$" ssh -o StrictHostKeyChecking=no root@192.168.122.201 "echo 'VM is ready'"
 # Command line arguments
 VM_NUM=$1
 PATTERN=$2
@@ -24,17 +21,6 @@ if [ $# != 4 ]; then
 fi
 
 echo -e "${INFO} 检查环境..."
-# 检查是否已经有SPDK进程
-if pgrep -f "nvmf_tgt" >/dev/null; then
-    echo -e "${ERROR} SPDK进程已存在"
-    exit 1
-fi
-
-# 检查是否有正在运行的测试虚拟机
-if virsh list | grep -q "vm0"; then
-    echo -e "${ERROR} 存在运行中的测试虚拟机"
-    exit 1
-fi
 
 # Validate VM number
 if [[ ${VM_NUM} -ne 1 && ${VM_NUM} -ne 5 ]]; then
@@ -149,7 +135,7 @@ echo -e "${INFO} Trace File:  ${FIO_REPLAY_TRACE}"
 echo -e "${INFO} Cache Size:  ${CACHE_SIZE}MB"
 echo -e "${INFO} VM Count:    ${VM_NUM}"
 echo -e "${INFO} Cache Part:  ${CACHE_PARTITION}MB"
-echo -e "${INFO} ======================================================"
+echo -e "${INFO} ============================================================"
 
 # spdk/vfiouser process starting
 mkdir -p ${RESULT_BASE}/log
@@ -220,8 +206,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
         else
             ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
-            echo -e "${INFO} wait for bdev_ocf_create"
-            sleep 30 # 确保bdev_ocf_create完成
+            sleep 3 # 确保bdev_ocf_create完成
             ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
         fi
         ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
@@ -235,12 +220,29 @@ done
 
 # 等待虚拟机启动并检查SSH连接
 echo -e "${INFO} 等待虚拟机启动..."
+# sleep 60 # 基础等待时间
+
+# # Wait for VMs to be ready
+# for ((j = 0; j < ${#VM_LIST[@]}; j++)); do
+#     max_attempts=20
+#     attempt=1
+#     while [[ $attempt -le $max_attempts ]]; do
+#         if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$j]} "echo ssh_login_success"; then
+#             echo -e "${INFO} VM ${VM_LIST[$j]} ssh login success"
+#             break
+#         else
+#             attempt=$((attempt + 1))
+#             sleep 5
+#         fi
+#     done
+#     if [[ $attempt -gt $max_attempts ]]; then
+#         echo -e "${ERROR} VM ${VM_LIST[$j]} ssh login failed"
 
 # 循环检查直到所有VM都就绪
 for ((i = 0; i < ${VM_NUM}; i++)); do
     while true; do
         if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$i]} "exit" 2>/dev/null; then
-            echo -e "\n${INFO} VM ${VM_LIST[$i]} 已就绪"
+            echo -e "${INFO} VM ${VM_LIST[$i]} 已就绪"
             break
         fi
         echo -n "."
