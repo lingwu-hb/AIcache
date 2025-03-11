@@ -43,3 +43,6 @@ rm -rf /var/run/bar0 /var/run/cntrl
 ./scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
 ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1
 ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
+
+# 获取缓存统计信息
+./scripts/rpc.py bdev_ocf_get_stats CAS1
