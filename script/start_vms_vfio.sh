@@ -230,24 +230,23 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     # 启动虚拟机
     virsh define ${VM_CONFIG_PATH}/${VM_LIST[$i]}.xml
     echo 3 >/proc/sys/vm/drop_caches
+    start_time=$(date +%s)
     virsh start ${VM_LIST[$i]}
 done
 
 # 等待虚拟机启动并检查SSH连接
 echo -e "${INFO} 等待虚拟机启动..."
 
+sleep 30
 # 循环检查直到所有VM都就绪
-for ((i = 0; i < ${VM_NUM}; i++)); do
-    while true; do
-        if sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 root@${VM_IP[$i]} "exit" 2>/dev/null; then
-            echo -e "\n${INFO} VM ${VM_LIST[$i]} 已就绪"
-            break
-        fi
-        echo -n "."
-        sleep 2
-    done
+
+vm_ip="${VM_BASE_IP}.$((200 + 1))"
+while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
+    elapsed=$(($(date +%s) - start_time))
+    echo -ne "\r等待VM就绪... ${elapsed}秒"
+    sleep 1
 done
-echo
+echo -e "\nVM已就绪，用时${elapsed}秒"
 
 # 启动FIO测试
 if [[ ${VM_NUM} == 5 ]]; then
