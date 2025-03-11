@@ -59,6 +59,7 @@ start_time=$(date +%s)
 ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 
 # 等待VM就绪
+sleep 30
 vm_ip="${VM_BASE_IP}.$((200 + 1))"
 while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
@@ -72,13 +73,13 @@ first_run=true
 
 # 算法循环
 for algo in "${algo_config[@]}"; do
-    echo "===== 测试算法: $algo ====="
+    echo "========== 测试算法: $algo =========="
 
     # Trace循环
     for replay_trace in "${replay_trace_config[@]}"; do
         # 解析trace和缓存大小
         read -r trace_file cache_size <<<"$replay_trace"
-        echo "===== 测试: $trace_file (缓存: $cache_size) ====="
+        echo "========== 测试: $trace_file (缓存: $cache_size) =========="
 
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
