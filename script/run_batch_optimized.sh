@@ -54,7 +54,7 @@ echo "===== 批量测试开始 $(date) ====="
 read -r first_trace first_cache <<<"${replay_trace_config[0]}"
 
 # 启动虚拟机并计时
-echo "启动环境..."
+echo "启动虚拟机..."
 start_time=$(date +%s)
 ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 
