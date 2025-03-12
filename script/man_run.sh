@@ -53,13 +53,6 @@ echo "===== 批量测试开始 $(date) ====="
 # 获取第一个trace和缓存大小用于初始启动
 read -r first_trace first_cache <<<"${replay_trace_config[0]}"
 
-# echo "start_vms_vfio.sh..." # 仅需要调用一次
-# start_time=$(date +%s)
-# ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
-
-# 标记第一次运行
-# first_run=true
-
 # 算法循环
 for algo in "${algo_config[@]}"; do
     echo "========== 测试算法: $algo =========="
@@ -70,21 +63,16 @@ for algo in "${algo_config[@]}"; do
         read -r trace_file cache_size <<<"$replay_trace"
         echo "========== 测试: $trace_file (缓存: $cache_size) =========="
 
-        # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
-        if [ "$first_run" != "true" ]; then
-            echo -e "\n${INFO}调整cache size..."
-            python3 ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
-            if [ $? -ne 0 ]; then
-                echo -e "\n${ERROR}调整cache size失败，跳过此trace"
-                continue
-            fi
-        else
-            first_run=false
+        echo -e "\n${INFO}调整cache size..."
+        ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
+        if [ $? -ne 0 ]; then
+            echo -e "\n${ERROR}调整cache size失败"
+            exit 1
         fi
 
         # 执行FIO测试
         echo "执行FIO测试..."
-        ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size" # TODO 这里参数不足
+        ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size"
         test_status=$?
 
         # 清理缓存
@@ -99,10 +87,6 @@ for algo in "${algo_config[@]}"; do
         sleep 3
     done
 done
-
-# 测试完成后停止虚拟机
-# echo "所有测试完成，停止虚拟机..."
-# ${SCRIPT_DIR}/stop_vms.sh
 
 # 生成测试报告
 if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then

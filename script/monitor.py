@@ -14,6 +14,15 @@ import argparse
 import os
 import csv
 
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SPDK_PATH = os.getenv("SPDK_PATH", "/home/lzq/spdk")
+LOG_PATH = os.getenv("LOG_PATH", os.path.join(SPDK_PATH, "log"))
+
+rpc_path = os.path.join(SPDK_PATH, "scripts/rpc.py")
+default_log_file = os.path.join(LOG_PATH, "/log/ocf_stats.log")
+
 # 添加颜色输出类
 class ColorOutput:
     """终端彩色输出"""
@@ -38,7 +47,7 @@ class ColorOutput:
         """打印错误"""
         print(f"{ColorOutput.ERROR}[ERROR]{ColorOutput.ENDC} {msg}")
 
-rpc_path = "/home/lzq/spdk/scripts/rpc.py" 
+
 
 class OCFMonitor:
     def __init__(self, cache_name, interval=5, log_file="ocf_stats.log"):
@@ -242,7 +251,7 @@ def main():
     parser.add_argument("cache_name", help="OCF缓存设备名称")
     parser.add_argument("-i", "--interval", type=int, default=1,
                       help="统计信息收集间隔(秒), 默认1秒")
-    parser.add_argument("-l", "--log", default="ocf_stats.log",
+    parser.add_argument("-l", "--log", default=default_log_file,
                       help="日志文件路径, 默认为ocf_stats.log")
     
     args = parser.parse_args()

@@ -37,15 +37,17 @@ export RESULT_BASE="${HOME_PATH}/AICache-tools"
 export FIO_PATH="${RESULT_BASE}/rawfio"
 
 export CSV_PATH="${RESULT_BASE}/csv"
-# export MYLOG= "${SPDK_PATH}/log"
+export LOG_PATH="${SPDK_PATH}/log"
 
 # Verify and create required directories
 create_required_dirs() {
     local dirs=(
-        "${RESULT_BASE}/rawfio"
+        "${LOG_PATH}"
+        "${FIO_PATH}"
+        "${CSV_PATH}"
+
         "${RESULT_BASE}/cas_log"
         "${RESULT_BASE}/iostat"
-        "${SPDK_PATH}/log"
         "${SPDK_PATH}/trace_log"
     )
 
