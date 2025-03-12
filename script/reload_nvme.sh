@@ -93,3 +93,6 @@ done
 
 # 8. 清理
 rm -f /tmp/vfio.xml
+echo 3 >/proc/sys/vm/drop_caches
+sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.201 "echo 3 > /proc/sys/vm/drop_caches"
+
