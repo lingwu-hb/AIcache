@@ -42,7 +42,7 @@ PCI_DEV="pci_${PCI_ADDR//:/_}"
 
 # 2. 创建临时XML文件
 cat >/tmp/vfio.xml <<EOF
-<hostdev mode='subsystem' type='pci' managed='yes'>
+<hostdev mode='subsystem' type='pci' managed='yes'> 
     <source>
         <address domain='0x0000' bus='0x83' slot='0x00' function='0x0'/>
     </source>

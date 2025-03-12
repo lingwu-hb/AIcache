@@ -1,16 +1,29 @@
 # Quick Start
 
 1. 停止和清理环境:
+```bash
+/home/lzq/AICache-tools/script/stop_vms.sh
+```
 
-/home/lzq/spdk_scripts_replaytrace/stop_vms.sh
+2. 手动测:
 
-2. 单个测试:
 
-/home/lzq/spdk_scripts_replaytrace/vm_now.sh
+```bash
+# 先起SPDK
+
+# 起VM
+/home/lzq/AICache-tools/script/vm_now.sh
+
+# 测试
+/home/lzq/AICache-tools/script/man_run.sh
+```
+
 
 3. 批量测试:
 
-./run_batch
+```bash
+/home/lzq/AICache-tools/script/RUN.sh
+```
 
 4. 监控 OCF 状态：
 
