@@ -53,12 +53,12 @@ echo "===== 批量测试开始 $(date) ====="
 # 获取第一个trace和缓存大小用于初始启动
 read -r first_trace first_cache <<<"${replay_trace_config[0]}"
 
-echo "start_vms_vfio.sh..." # 仅需要调用一次
+# echo "start_vms_vfio.sh..." # 仅需要调用一次
 # start_time=$(date +%s)
-${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
+# ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 
 # 标记第一次运行
-first_run=true
+# first_run=true
 
 # 算法循环
 for algo in "${algo_config[@]}"; do
@@ -101,8 +101,8 @@ for algo in "${algo_config[@]}"; do
 done
 
 # 测试完成后停止虚拟机
-echo "所有测试完成，停止虚拟机..."
-${SCRIPT_DIR}/stop_vms.sh
+# echo "所有测试完成，停止虚拟机..."
+# ${SCRIPT_DIR}/stop_vms.sh
 
 # 生成测试报告
 if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then
