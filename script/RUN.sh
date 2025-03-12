@@ -10,10 +10,10 @@ source ${SCRIPT_DIR}/config.sh
 replay_trace_config=(
     "ali-dev-5.txt 91"
     "hm_0.txt 96"
-    # "mds_1.txt 4300"
-    # "prn_0.txt 193"
-    # "proj_0.txt 91"
-    # "proj_3.txt 270"
+    "mds_1.txt 4300"
+    "prn_0.txt 193"
+    "proj_0.txt 91"
+    "proj_3.txt 270"
     # "prxy_0.txt 63"
     # "rsrch_0.txt 17"
     # "rsrch_2.txt 68"
@@ -37,7 +37,7 @@ replay_trace_config=(
 # 算法配置
 algo_config=(
     "das-bind"
-    "no-prefetch"
+    "no_prefetch"
     # 可以根据需要添加更多的算法
 )
 

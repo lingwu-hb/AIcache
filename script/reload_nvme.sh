@@ -6,7 +6,7 @@ source ${SCRIPT_DIR}/config.sh
 
 # 默认值
 VM_BASE_IP=${VM_BASE_IP:-"192.168.122"}
-VM_SSH_PASS=${VM_SSH_PASS:-"openEuler12#$"}
+# VM_SSH_PASS=${VM_SSH_PASS:-"openEuler12#$"} # 注释掉密码，因为已配置免密登录
 SPDK_PATH=${SPDK_PATH:-"/home/lzq/spdk"}
 
 [ $# -lt 4 ] && echo "Usage: $0 --cache-size SIZE --vm-ids VM_IDS" && exit 1
@@ -30,8 +30,14 @@ set -x
 check_device_status() {
     local vm_id=$1
     local vm_name="vm$(printf "%02d" $vm_id)"
-    # TODO: 需要确认SSH的具体连接参数是否正确
-    sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.${vm_id} "lsblk | grep nvme || echo '无nvme0设备'"
+    echo "检查VM ${vm_id} 的设备状态..."
+    local result=$(ssh root@${VM_BASE_IP}.${vm_id} "lsblk | grep nvme")
+    if [ -z "$result" ]; then
+        ssh root@${VM_BASE_IP}.${vm_id} "lsblk"
+        exit 1
+    fi
+    echo "VM ${vm_id} nvme设备状态："
+    echo "$result"
 }
 
 # 1. 获取PCI设备信息
@@ -62,21 +68,25 @@ cd ${SPDK_PATH}
 
 # 4. 删除CAS1, 然后lsblk会发现nvme0n1p0消失了
 ./scripts/rpc.py bdev_ocf_delete CAS1
+sleep 2
 ./scripts/rpc.py bdev_split_delete nvme0n1
+sleep 2
 
 # ./scripts/rpc.py bdev_nvme_attach_controller -b nvme0 -t PCIe -a ${PCI_ADDR}
 # 5. 重新组合OCF设备
 
 ./scripts/rpc.py bdev_split_create -s ${CACHE_SIZE} nvme0n1 1
-
+sleep 2
 #./scripts/rpc.py bdev_split_create -s 100 nvme0n1 1
 
 ./scripts/rpc.py bdev_ocf_create CAS1 wt nvme0n1p0 core1 --cache-line-size 4
+sleep 2
 
 # 6. 重新配置VFIO传输
 # ./scripts/rpc.py nvmf_create_transport -t VFIOUSER
 # ./scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
 ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1
+sleep 2
 # ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
 
 # # 7. 重新附加设备到VM，验证lsblk是否看到nvme0n1
@@ -94,5 +104,9 @@ done
 # 8. 清理
 rm -f /tmp/vfio.xml
 echo 3 >/proc/sys/vm/drop_caches
-sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.201 "echo 3 > /proc/sys/vm/drop_caches"
+
+# 为所有VM清理缓存，而不是硬编码201
+for vm_id in $(echo $VM_IDS | tr ',' ' '); do
+    ssh root@${VM_BASE_IP}.${vm_id} "echo 3 > /proc/sys/vm/drop_caches"
+done
 

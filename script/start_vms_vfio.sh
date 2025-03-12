@@ -239,7 +239,7 @@ echo -e "${INFO} 轮询VM是否可以SSH连接..."
 
 # vm已经RUNNING，再检查SSH连接
 vm_ip="${VM_BASE_IP}.$((200 + 1))"
-while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
+while ! ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
     echo -ne "\r等待SSH就绪... ${elapsed}秒"
     sleep 1
