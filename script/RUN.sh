@@ -9,8 +9,8 @@ source ${SCRIPT_DIR}/config.sh
 # 测试trace配置
 replay_trace_config=(
     "ali-dev-5.txt 91"
-    "hm_0.txt 96"
-    "mds_1.txt 4300"
+    # "hm_0.txt 96"
+    # "mds_1.txt 4300"
     "prn_0.txt 193"
     "proj_0.txt 91"
     "proj_3.txt 270"
@@ -53,12 +53,12 @@ echo "===== 批量测试开始 $(date) ====="
 # 获取第一个trace和缓存大小用于初始启动
 read -r first_trace first_cache <<<"${replay_trace_config[0]}"
 
-# echo "start_vms_vfio.sh..." # 仅需要调用一次
-# start_time=$(date +%s)
-# ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
+echo "start_vms_vfio.sh..." # 仅需要调用一次
+start_time=$(date +%s)
+${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 
 # 标记第一次运行
-# first_run=true
+first_run=true
 
 # 算法循环
 for algo in "${algo_config[@]}"; do
@@ -83,19 +83,18 @@ for algo in "${algo_config[@]}"; do
         fi
 
         # 执行FIO测试
-        echo "执行FIO测试..."
+        echo "fio_vm_test.sh..."
         ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size"
         test_status=$?
 
         # 清理缓存
-        echo "清理缓存..."
+        echo -e "${INFO}Drop cache..."
         echo 3 >/proc/sys/vm/drop_caches
 
         # 为每个VM清理缓存
         for ((i = 1; i <= VM_COUNT; i++)); do
             sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.$((200 + i)) "echo 3 > /proc/sys/vm/drop_caches"
         done
-
         sleep 3
     done
 done
