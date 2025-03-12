@@ -28,45 +28,46 @@ done
 set -x
 set -e # 添加错误检查
 
-# 检查设备初始状态
-lsblk_check() {
-    local vm_id=$1
-    ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk" | grep nvme || echo -e "\033[31mERROR: VM ${vm_id} 无nvme设备\033[0m"
-}
-
-# 1. 获取PCI设备信息
+# 获取PCI设备信息
 # PCI_ADDR="0000:83:00.0"
 # PCI_DEV="pci_${PCI_ADDR//:/_}"
 # virsh nodedev-detach $PCI_DEV
 
+# 1. 检查是否有nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
-    lsblk_check $vm_id || exit 1
+    if ! ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk | grep -q nvme"; then
+        echo -e "${ERROR} VM${vm_id} 无nvme设备"
+        exit 1
+    fi
+    lsblk_check $vm_id
 done
-
-# 3. 分离设备
 
 cd ${SPDK_PATH}
 
-# 4. 删除CAS1, 然后lsblk会发现nvme0n1p0消失了
+# 2. 删除CAS1, 然后lsblk会发现nvme0n1p0消失了
 ./scripts/rpc.py bdev_ocf_delete CAS1 || true # 忽略首次删除可能的错误
 sleep 3
+ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk"
+
+# 3. 删除nvme0n1，按新的CacheSize重建
 ./scripts/rpc.py bdev_split_delete nvme0n1 || true # 忽略首次删除可能的错误
 sleep 3
 
 # ./scripts/rpc.py bdev_nvme_attach_controller -b nvme0 -t PCIe -a ${PCI_ADDR}
-# 5. 重新组合OCF设备
 if ! ./scripts/rpc.py bdev_split_create -s ${CACHE_SIZE} nvme0n1 1; then
+    echo -e "${ERROR} 创建split设备失败"
     exit 1
 fi
 sleep 3
 
+# 4. 重新创建OCF设备
 if ! ./scripts/rpc.py bdev_ocf_create CAS1 wt nvme0n1p0 core1 --cache-line-size 4; then
     echo -e "${ERROR} 创建OCF设备失败"
     exit 1
 fi
 sleep 3
 
-# 6. 重新配置VFIO传输
+# 重新配置VFIO传输
 # ./scripts/rpc.py nvmf_create_transport -t VFIOUSER
 # ./scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
 if ! ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1; then
@@ -91,17 +92,15 @@ sleep 3
 #     virsh attach-device $VM_NAME /tmp/vfio.xml --current
 # done
 
-# 检查每个VM的最终设备状态
-echo "检查是否重新发现了nvme..."
+# 检查是否重新发现了nvme...
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
-    show_nvme_status $vm_id || exit 1
+    ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk" | grep nvme || echo -e "${ERROR} VM${vm_id} VM无CAS1"
 done
 
-# 8. 清理
+# 清理
 rm -f /tmp/vfio.xml
+# 清理缓存
 echo 3 >/proc/sys/vm/drop_caches
-
-# 为所有VM清理缓存
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     if ! ssh root@${VM_BASE_IP}.${vm_id} "echo 3 > /proc/sys/vm/drop_caches"; then
         echo -e "${WARNING} VM ${vm_id} 清理缓存失败"
