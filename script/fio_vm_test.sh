@@ -33,19 +33,19 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     echo 3 >/proc/sys/vm/drop_caches
     sshpass -p ${VM_SSH_PASS} ssh root@${VM_IP[$i]} "echo 3 > /proc/sys/vm/drop_caches"
     sshpass -p ${VM_SSH_PASS} ssh root@${VM_IP[$i]} "mkdir -p ${fio_result_log}"
-    bash ${SCRIPT_DIR}/run_fio_test.sh ${VM_IP[$i]} ${TARGET_DISK} ${PATTERN} ${FIO_REPLAY_TRACE} ${fio_result_log} ${TIME_STAMP} &
+    bash ${SCRIPT_DIR}/run_fio_test.sh ${VM_IP[$i]} ${TARGET_DISK} ${PATTERN} ${FIO_REPLAY_TRACE} ${fio_result_log} ${TIME_STAMP}
 done
 sleep 10 # 等待fio进程启动
 
 # 轮询等待所有FIO测试结束
-echo -e "${INFO} 轮询等待所有FIO测试结束..."
+# echo -e "${INFO} 轮询等待所有FIO测试结束..."
 while [ $(ps aux | grep "fio_result.log" | grep -v grep | wc -l) -gt 0 ]; do
     sleep 10
     echo -n "."
 done
 echo
 
-echo -e "${INFO} 从虚拟机复制测试结果到主机"
+echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
     mkdir -p ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
     sshpass -p ${VM_SSH_PASS} scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
