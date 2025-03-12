@@ -94,4 +94,4 @@ if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then
     python3 ${SCRIPT_DIR}/parse_fio.py
 fi
 
-echo "===== 批量测试结束 $(date) ====="
+echo "===== 测试结束 $(date) ====="
