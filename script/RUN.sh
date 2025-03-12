@@ -57,16 +57,6 @@ echo "start_vms_vfio.sh..." # 仅需要调用一次
 # start_time=$(date +%s)
 ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[0]}" "$first_trace" "$first_cache"
 
-# 等待VM就绪的检查已经在start_vms_vfio.sh中完成，这里不需要重复
-# sleep 30
-# vm_ip="${VM_BASE_IP}.$((200 + 1))"
-# while ! sshpass -p "${VM_SSH_PASS}" ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no root@${vm_ip} "exit" 2>/dev/null; do
-#     elapsed=$(($(date +%s) - start_time))
-#     echo -ne "\r等待VM就绪... ${elapsed}秒"
-#     sleep 2
-# done
-# echo -e "\nVM已就绪，用时${elapsed}秒"
-
 # 标记第一次运行
 first_run=true
 

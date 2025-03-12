@@ -35,14 +35,10 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     sshpass -p ${VM_SSH_PASS} ssh root@${VM_IP[$i]} "mkdir -p ${fio_result_log}"
     bash ${SCRIPT_DIR}/run_fio_test.sh ${VM_IP[$i]} ${TARGET_DISK} ${PATTERN} ${FIO_REPLAY_TRACE} ${fio_result_log} ${TIME_STAMP} &
 done
-
 sleep 10 # 等待fio进程启动
 
 # 轮询等待所有FIO测试结束
-echo -e "${INFO} 等待FIO测试完成..."
-# 先等待较长时间
-sleep 30
-# 然后更频繁地检查
+echo -e "${INFO} 轮询等待所有FIO测试结束..."
 while [ $(ps aux | grep "fio_result.log" | grep -v grep | wc -l) -gt 0 ]; do
     sleep 10
     echo -n "."
@@ -51,11 +47,11 @@ echo
 
 echo -e "${INFO} 从虚拟机复制测试结果到主机"
 for ((i = 0; i < ${VM_NUM}; i++)); do
-    mkdir -p ${RESULT_BASE}/result/${PATTERN}+${FIO_REPLAY_TRACE}
-    sshpass -p ${VM_SSH_PASS} scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${RESULT_BASE}/result/${PATTERN}+${FIO_REPLAY_TRACE}
+    mkdir -p ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
+    sshpass -p ${VM_SSH_PASS} scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
-    for result_file in ${RESULT_BASE}/result/${PATTERN}+${FIO_REPLAY_TRACE}/*_fio_result.log; do
+    for result_file in ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}/*_fio_result.log; do
         if [ -f "$result_file" ]; then
             echo -e "\n# TEST_METADATA: CACHE_SIZE=${CACHE_SIZE}, TIMESTAMP=${TIME_STAMP}" >>"$result_file"
             echo -e "${INFO} FIO结果写入到${result_file}"

@@ -54,7 +54,7 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                > ${FIO_RESULT_LOG}/${disk}/fio_result.log &" &
+                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log"
     else
         echo "start fio real trace ${FIO_REPLAY_TRACE} replay"
         sshpass -p "${VM_SSH_PASS}" ssh root@${VMIP} "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
@@ -70,6 +70,6 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                > ${FIO_RESULT_LOG}/${disk}/fio_result.log &" &
+                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log"
     fi
 done
