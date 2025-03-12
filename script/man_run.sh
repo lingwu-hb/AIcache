@@ -73,7 +73,7 @@ for algo in "${algo_config[@]}"; do
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
             echo -e "\n${INFO}调整cache size..."
-            ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT" # TODO：有问题，但是手动用是OK的。
+            python3 ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
             if [ $? -ne 0 ]; then
                 echo -e "\n${ERROR}调整cache size失败，跳过此trace"
                 continue
@@ -84,7 +84,7 @@ for algo in "${algo_config[@]}"; do
 
         # 执行FIO测试
         echo "执行FIO测试..."
-        ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size"
+        ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size" # TODO 这里参数不足
         test_status=$?
 
         # 清理缓存
