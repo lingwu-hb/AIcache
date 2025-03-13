@@ -49,7 +49,7 @@ echo
 echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
     mkdir -p ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
-    exec_vm scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
+    exec_vm "${VM_LIST[$i]}" "cp -r ${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}"
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
     for result_file in ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}/*_fio_result.log; do

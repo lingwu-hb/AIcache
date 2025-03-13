@@ -34,11 +34,17 @@ replay_trace_config=(
     # "ali-dev-3.txt 8200"
 )
 
-# 算法配置
+# 算法配置(libdas.so)
 algo_config=(
     "das-bind"
     "no_prefetch"
     # 可以根据需要添加更多的算法
+)
+
+spdk_branch=(
+    "baseline"
+    "lzq"
+    "hb"
 )
 
 # 虚拟机数量
@@ -93,7 +99,8 @@ for algo in "${algo_config[@]}"; do
 
         # 为每个VM清理缓存
         for ((i = 1; i <= VM_COUNT; i++)); do
-            exec_vm "echo 3 > /proc/sys/vm/drop_caches"
+            VM_NAME="vm$(printf "%02d" $i)"
+            exec_vm "${VM_NAME}" "echo 3 > /proc/sys/vm/drop_caches"
         done
         sleep 3
     done

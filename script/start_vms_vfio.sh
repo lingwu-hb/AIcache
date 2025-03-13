@@ -219,7 +219,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     virsh start ${VM_LIST[$i]}
 done
 
-# 等待虚拟机启动并检查SSH连接
+# 等待虚拟机启动并检查连接
 echo -e "${INFO} 轮询VM是否启动..."
 
 sleep 10 # 稍微等待一下让VM开始启动
@@ -235,9 +235,8 @@ done
 
 echo -e "${INFO} 轮询VM是否可以连接..."
 
-# vm已经RUNNING，再检查SSH连接
-vm_ip="${VM_BASE_IP}.$((200 + 1))"
-while ! exec_vm "exit" 2>/dev/null; do
+# vm已经RUNNING，再检查连接
+while ! exec_vm "${vm_name}" "exit" 2>/dev/null; do
     elapsed=$(($(date +%s) - start_time))
     echo -ne "\r等待就绪... ${elapsed}秒"
     sleep 1
