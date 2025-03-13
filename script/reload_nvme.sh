@@ -37,7 +37,7 @@ done
 execute_in_vm() {
     local VM_NAME=$1
     local CMD=$2
-    
+
     # 执行命令并获取PID
     local EXEC_OUT=$(virsh qemu-agent-command "$VM_NAME" "{
         \"execute\": \"guest-exec\",
@@ -47,10 +47,10 @@ execute_in_vm() {
             \"capture-output\": true
         }
     }")
-    
+
     # 提取PID
     local PID=$(echo "$EXEC_OUT" | grep -o '"pid":[0-9]*' | cut -d':' -f2)
-    
+
     # 获取命令执行结果
     local RESULT=$(virsh qemu-agent-command "$VM_NAME" "{
         \"execute\": \"guest-exec-status\",
@@ -58,7 +58,7 @@ execute_in_vm() {
             \"pid\": $PID
         }
     }")
-    
+
     # 提取实际输出 (需要base64解码)
     echo "$RESULT" | grep -o '"out-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
 }
