@@ -1,4 +1,6 @@
 #!/bin/bash
+# 这是所有脚本的Base配置文件
+
 # 配置颜色输出
 INFO='\e[32m[INFO]\e[0m'
 ERROR='\e[31m[ERROR]\e[0m'

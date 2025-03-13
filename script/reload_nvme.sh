@@ -35,7 +35,7 @@ done
 
 # 辅助函数：执行命令并获取输出
 execute_in_vm() {
-    local VM_NAME=$1
+    local VM_NAME=${1:-"vm01"}
     local CMD=$2
 
     # 执行命令并获取PID
