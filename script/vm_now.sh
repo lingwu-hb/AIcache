@@ -1,5 +1,5 @@
 #!/bin/bash
-# 手动测试 
+# 手动测试
 # 先手动开SPDK tgt  app
 # 该脚本会初始化SPDK和QEMU
 # Source configuration
@@ -9,16 +9,16 @@
 TOOL_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${TOOL_DIR}/config.sh
 
-XML_FILE="/home/lzq/AICache-tools/vm01.xml"  # 调整XML文件的目录
+XML_FILE="/home/lzq/AICache-tools/vm01.xml" # 调整XML文件的目录
 
 # 接管设备
 ${SPDK_PATH}/scripts/setup.sh
 
 # 分配大页
-echo 15000 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
-echo 5000 > /sys/devices/system/node/node1/hugepages/hugepages-2048kB/nr_hugepages
-echo 5000 > /sys/devices/system/node/node2/hugepages/hugepages-2048kB/nr_hugepages
-echo 5000 > /sys/devices/system/node/node3/hugepages/hugepages-2048kB/nr_hugepages
+echo 15000 >/sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+echo 5000 >/sys/devices/system/node/node1/hugepages/hugepages-2048kB/nr_hugepages
+echo 5000 >/sys/devices/system/node/node2/hugepages/hugepages-2048kB/nr_hugepages
+echo 5000 >/sys/devices/system/node/node3/hugepages/hugepages-2048kB/nr_hugepages
 
 sleep 1
 
@@ -38,17 +38,15 @@ scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1
 rm -rf /var/run/bar0 /var/run/cntrl
 scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run -s 0
 
-
 #!/bin/bash
 #  手动连入虚拟机（自动修改xml文件，并且退出时修改回来）
 
-
 sleep 1
-# 
+#
 virsh destroy vm01
 
 # 取消定义
-virsh undefine vm01 --nvram 
+virsh undefine vm01 --nvram
 
 sed -i 's#/var/run/vm01/cntrl#/var/run/cntrl#' "$XML_FILE"
 
@@ -62,4 +60,3 @@ virsh start vm01
 sed -i 's#/var/run/cntrl#/var/run/vm01/cntrl#' "$XML_FILE"
 
 exit
-
