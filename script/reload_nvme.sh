@@ -33,36 +33,6 @@ done
 # PCI_DEV="pci_${PCI_ADDR//:/_}"
 # virsh nodedev-detach $PCI_DEV
 
-# 辅助函数：执行命令并获取输出
-execute_in_vm() {
-    local VM_NAME=${1:-"vm01"}
-    local CMD=$2
-
-    # 执行命令并获取PID
-    local EXEC_OUT=$(virsh qemu-agent-command "$VM_NAME" "{
-        \"execute\": \"guest-exec\",
-        \"arguments\": {
-            \"path\": \"/bin/sh\",
-            \"arg\": [\"-c\", \"$CMD\"],
-            \"capture-output\": true
-        }
-    }")
-
-    # 提取PID
-    local PID=$(echo "$EXEC_OUT" | grep -o '"pid":[0-9]*' | cut -d':' -f2)
-
-    # 获取命令执行结果
-    local RESULT=$(virsh qemu-agent-command "$VM_NAME" "{
-        \"execute\": \"guest-exec-status\",
-        \"arguments\": {
-            \"pid\": $PID
-        }
-    }")
-
-    # 提取实际输出 (需要base64解码)
-    echo "$RESULT" | grep -o '"out-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
-}
-
 # 1. 检查是否有nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     VM_NAME="vm$(printf "%02d" $vm_id)"

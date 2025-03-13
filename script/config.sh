@@ -112,9 +112,40 @@ init_env() {
     print_config
 }
 
+# 辅助函数：执行命令并获取输出
+execute_in_vm() {
+    local VM_NAME=${1:-"vm01"}
+    local CMD=$2
+
+    # 执行命令并获取PID
+    local EXEC_OUT=$(virsh qemu-agent-command "$VM_NAME" "{
+        \"execute\": \"guest-exec\",
+        \"arguments\": {
+            \"path\": \"/bin/sh\",
+            \"arg\": [\"-c\", \"$CMD\"],
+            \"capture-output\": true
+        }
+    }")
+
+    # 提取PID
+    local PID=$(echo "$EXEC_OUT" | grep -o '"pid":[0-9]*' | cut -d':' -f2)
+
+    # 获取命令执行结果
+    local RESULT=$(virsh qemu-agent-command "$VM_NAME" "{
+        \"execute\": \"guest-exec-status\",
+        \"arguments\": {
+            \"pid\": $PID
+        }
+    }")
+
+    # 提取实际输出 (需要base64解码)
+    echo "$RESULT" | grep -o '"out-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
+}
+
 # Export helper functions
 export -f create_required_dirs
 export -f verify_spdk
 export -f verify_tools
 export -f print_config
 export -f init_env
+export -f execute_in_vm
