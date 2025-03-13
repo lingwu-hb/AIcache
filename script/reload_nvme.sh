@@ -124,7 +124,10 @@ sleep 3
 # 检查是否重新发现了nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     VM_NAME="vm$(printf "%02d" $vm_id)"
-    if ! execute_in_vm "$VM_NAME" "lsblk" | grep -q nvme; then
+    echo -e "${INFO} VM${vm_id} 新的设备列表:"
+    list=$(execute_in_vm "$VM_NAME" "lsblk")
+    echo "$list"
+    if ! echo "$list" | grep -q nvme; then
         echo -e "${ERROR} VM${vm_id} VM无CAS1"
     fi
 done
