@@ -32,8 +32,8 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     VM_IP[$i]="${VM_BASE_IP}.$((${VM_START_IP} + i))"
     # drop cache
     echo 3 >/proc/sys/vm/drop_caches
-    ssh -o StrictHostKeyChecking=no root@${VM_IP[$i]} "echo 3 > /proc/sys/vm/drop_caches"
-    ssh -o StrictHostKeyChecking=no root@${VM_IP[$i]} "mkdir -p ${fio_result_log}"
+    exec_vm "echo 3 > /proc/sys/vm/drop_caches"
+    exec_vm "mkdir -p ${fio_result_log}"
     bash ${SCRIPT_DIR}/run_fio_test.sh ${VM_IP[$i]} ${TARGET_DISK} ${PATTERN} ${FIO_REPLAY_TRACE} ${fio_result_log} ${TIME_STAMP}
 done
 sleep 10 # 等待fio进程启动
@@ -49,7 +49,7 @@ echo
 echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
     mkdir -p ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
-    ssh -o StrictHostKeyChecking=no root@${VM_IP[$i]} scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
+    exec_vm scp -r root@${VM_IP[$i]}:${fio_result_log}/* ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
     for result_file in ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}/*_fio_result.log; do

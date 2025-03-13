@@ -31,12 +31,14 @@ replay_trace_config=(
     # "proj_2.txt 20990"
     # "ali-dev-3.txt 8200"
 )
-# "hm_0.txt 96" # 
+# "hm_0.txt 96" #
 # "rsrch_0.txt 17"
 
 # SPDK 分支
 spdk_branch=(
-
+    "baseline"
+    "lzq"
+    "hb"
 )
 # 算法配置
 algo_config=(
@@ -84,7 +86,7 @@ for algo in "${algo_config[@]}"; do
 
         # 为每个VM清理缓存
         for ((i = 1; i <= VM_COUNT; i++)); do
-            sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.$((200 + i)) "echo 3 > /proc/sys/vm/drop_caches"
+            exec_vm "vm$(printf "%02d" $i)" "echo 3 > /proc/sys/vm/drop_caches"
         done
 
         sleep 3

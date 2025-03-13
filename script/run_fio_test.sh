@@ -40,7 +40,7 @@ fi
 for disk in "${test_disk[@]}"; do
     if [[ ${FIO_REPLAY_TRACE} == req ]]; then
         echo "start fio seq test"
-        sshpass -p "${VM_SSH_PASS}" ssh root@${VMIP} "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
+        exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
             fio -filename=/dev/${disk} \
                 -direct=1 \
@@ -57,7 +57,7 @@ for disk in "${test_disk[@]}"; do
                 2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log"
     else
         echo "start fio real trace ${FIO_REPLAY_TRACE} replay"
-        sshpass -p "${VM_SSH_PASS}" ssh root@${VMIP} "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
+        exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
             fio -replay_redirect=/dev/${disk} \
                 -direct=1 \

@@ -93,7 +93,7 @@ for algo in "${algo_config[@]}"; do
 
         # 为每个VM清理缓存
         for ((i = 1; i <= VM_COUNT; i++)); do
-            sshpass -p "${VM_SSH_PASS}" ssh -o StrictHostKeyChecking=no root@${VM_BASE_IP}.$((200 + i)) "echo 3 > /proc/sys/vm/drop_caches"
+            exec_vm "echo 3 > /proc/sys/vm/drop_caches"
         done
         sleep 3
     done
