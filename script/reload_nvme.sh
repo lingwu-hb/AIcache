@@ -35,7 +35,8 @@ set -e # 添加错误检查
 
 # 1. 检查是否有nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
-    if ! ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk | grep -q nvme"; then
+    VM_NAME="vm$(printf "%02d" $vm_id)"
+    if ! virsh qemu-agent-command $VM_NAME '{"execute": "guest-exec", "arguments": {"path": "lsblk", "arg": [], "capture-output": true}}' | grep -q nvme; then
         echo -e "${ERROR} VM${vm_id} 无nvme设备"
     fi
 done
@@ -45,7 +46,10 @@ cd ${SPDK_PATH}
 # 2. 删除CAS1, 然后lsblk会发现nvme0n1p0消失了
 ./scripts/rpc.py bdev_ocf_delete CAS1 || true # 忽略首次删除可能的错误
 sleep 3
-ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk"
+
+# 检查设备状态
+VM_NAME="vm$(printf "%02d" $vm_id)"
+virsh qemu-agent-command $VM_NAME '{"execute": "guest-exec", "arguments": {"path": "lsblk", "arg": [], "capture-output": true}}'
 
 # 3. 删除nvme0n1，按新的CacheSize重建
 ./scripts/rpc.py bdev_split_delete nvme0n1 || true # 忽略首次删除可能的错误
@@ -87,17 +91,23 @@ sleep 3
 #     virsh attach-device $VM_NAME /tmp/vfio.xml --current
 # done
 
-# 检查是否重新发现了nvme...
+# 检查是否重新发现了nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
-    ssh root@${VM_BASE_IP}.${200+${vm_id}} "lsblk" | grep nvme || echo -e "${ERROR} VM${vm_id} VM无CAS1"
+    VM_NAME="vm$(printf "%02d" $vm_id)"
+    if ! virsh qemu-agent-command $VM_NAME '{"execute": "guest-exec", "arguments": {"path": "lsblk", "arg": [], "capture-output": true}}' | grep -q nvme; then
+        echo -e "${ERROR} VM${vm_id} VM无CAS1"
+    fi
 done
 
 # 清理
 rm -f /tmp/vfio.xml
 # 清理缓存
 echo 3 >/proc/sys/vm/drop_caches
+
+# 为每个VM清理缓存
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
-    if ! ssh root@${VM_BASE_IP}.${vm_id} "echo 3 > /proc/sys/vm/drop_caches"; then
+    VM_NAME="vm$(printf "%02d" $vm_id)"
+    if ! virsh qemu-agent-command $VM_NAME '{"execute": "guest-exec", "arguments": {"path": "sh", "arg": ["-c", "echo 3 > /proc/sys/vm/drop_caches"], "capture-output": true}}'; then
         echo -e "${WARNING} VM ${vm_id} 清理缓存失败"
     fi
 done
