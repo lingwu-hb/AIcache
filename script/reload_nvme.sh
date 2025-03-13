@@ -36,7 +36,7 @@ done
 # 1. 检查是否有nvme设备
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     VM_NAME="vm$(printf "%02d" $vm_id)"
-    if ! execute_in_vm "$VM_NAME" "lsblk" | grep -q nvme; then
+    if ! exec_vm "$VM_NAME" "lsblk" | grep -q nvme; then
         echo -e "${ERROR} VM${vm_id} 无nvme设备"
     fi
 done
@@ -49,7 +49,7 @@ sleep 3
 
 # 检查设备状态
 VM_NAME="vm$(printf "%02d" $vm_id)"
-execute_in_vm "$VM_NAME" "lsblk"
+exec_vm "$VM_NAME" "lsblk"
 
 # 3. 删除nvme0n1，按新的CacheSize重建
 ./scripts/rpc.py bdev_split_delete nvme0n1 || true # 忽略首次删除可能的错误
@@ -95,7 +95,7 @@ sleep 3
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     VM_NAME="vm$(printf "%02d" $vm_id)"
     echo -e "${INFO} VM${vm_id} 新的设备列表:"
-    list=$(execute_in_vm "$VM_NAME" "lsblk")
+    list=$(exec_vm "$VM_NAME" "lsblk")
     echo "$list"
     if ! echo "$list" | grep -q nvme; then
         echo -e "${ERROR} VM${vm_id} VM无CAS1"
@@ -110,7 +110,7 @@ echo 3 >/proc/sys/vm/drop_caches
 # 为每个VM清理缓存
 for vm_id in $(echo $VM_IDS | tr ',' ' '); do
     VM_NAME="vm$(printf "%02d" $vm_id)"
-    if ! execute_in_vm "$VM_NAME" "echo 3 > /proc/sys/vm/drop_caches"; then
+    if ! exec_vm "$VM_NAME" "echo 3 > /proc/sys/vm/drop_caches"; then
         echo -e "${WARNING} VM ${vm_id} 清理缓存失败"
     fi
 done

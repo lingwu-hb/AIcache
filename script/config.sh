@@ -113,7 +113,7 @@ init_env() {
 }
 
 # 辅助函数：执行命令并获取输出
-execute_in_vm() {
+exec_vm() {
     local VM_NAME=${1:-"vm01"}
     local CMD=$2
 
@@ -148,4 +148,4 @@ export -f verify_spdk
 export -f verify_tools
 export -f print_config
 export -f init_env
-export -f execute_in_vm
+export -f exec_vm
