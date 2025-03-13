@@ -31,9 +31,13 @@ replay_trace_config=(
     # "proj_2.txt 20990"
     # "ali-dev-3.txt 8200"
 )
-# "hm_0.txt 96" # 每次跑HM都卡住！
+# "hm_0.txt 96" # 
 # "rsrch_0.txt 17"
 
+# SPDK 分支
+spdk_branch=(
+
+)
 # 算法配置
 algo_config=(
     "das-bind"
