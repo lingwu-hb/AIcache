@@ -25,8 +25,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-set -x
-set -e # 添加错误检查
+# set -x
+# set -e # 添加错误检查
 
 # 获取PCI设备信息
 # PCI_ADDR="0000:83:00.0"
