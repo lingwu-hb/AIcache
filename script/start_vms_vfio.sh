@@ -93,7 +93,11 @@ if [[ ${PATTERN} != baseline ]]; then
 fi
 
 # SPDK setup
-echo -e "${INFO} SPDK preparing..."
+cd ${SPDK_PATH}
+spdk_branch=$(git branch | grep -v "*" | xargs)
+
+echo -e "${INFO} SPDK branch: ${spdk_branch}"
+
 ${SPDK_PATH}/scripts/setup.sh cleanup &>/dev/null
 sleep 2
 ${SPDK_PATH}/scripts/setup.sh reset &>/dev/null

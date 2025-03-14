@@ -41,12 +41,6 @@ algo_config=(
     # 可以根据需要添加更多的算法
 )
 
-spdk_branch=(
-    "baseline"
-    "lzq"
-    "hb"
-)
-
 # 虚拟机数量
 VM_COUNT=1
 
@@ -54,7 +48,7 @@ VM_COUNT=1
 log_file="${RESULT_BASE}/batch_run_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$log_file") 2>&1
 
-echo "===== 批量测试开始 $(date) ====="
+echo "========== $(date) =========="
 
 # 获取第一个trace和缓存大小用于初始启动
 read -r first_trace first_cache <<<"${replay_trace_config[0]}"
@@ -74,14 +68,30 @@ for algo in "${algo_config[@]}"; do
     for replay_trace in "${replay_trace_config[@]}"; do
         # 解析trace和缓存大小
         read -r trace_file cache_size <<<"$replay_trace"
-        echo "========== 测试: $trace_file (缓存: $cache_size) =========="
+        echo "========== 测试:$algo $trace_file (缓存: $cache_size) =========="
 
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         if [ "$first_run" != "true" ]; then
             echo -e "\n${INFO}调整cache size..."
-            ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT" # TODO：有问题，但是手动用是OK的。
-            if [ $? -ne 0 ]; then
-                echo -e "\n${ERROR}调整cache size失败，跳过此trace"
+            retry_count=0
+            max_retries=3
+            success=false
+
+            while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+                ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
+                if [ $? -eq 0 ]; then
+                    success=true
+                else
+                    retry_count=$((retry_count + 1))
+                    if [ $retry_count -lt $max_retries ]; then
+                        echo -e "\n${WARNING}调整cache size失败,等待10秒后重试 (尝试 $retry_count/$max_retries)"
+                        sleep 10
+                    fi
+                fi
+            done
+
+            if [ "$success" = false ]; then
+                echo -e "\n${ERROR}调整cache size连续${max_retries}次失败"
                 continue
             fi
         else
@@ -89,12 +99,12 @@ for algo in "${algo_config[@]}"; do
         fi
 
         # 执行FIO测试
-        echo "fio_vm_test.sh..."
+        echo -e "${INFO} fio_vm_test.sh..."
         ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size"
         test_status=$?
 
         # 清理缓存
-        echo -e "${INFO}Drop cache..."
+        echo -e "${INFO} Drop cache..."
         echo 3 >/proc/sys/vm/drop_caches
 
         # 为每个VM清理缓存
