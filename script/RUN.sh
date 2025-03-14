@@ -45,7 +45,7 @@ algo_config=(
 VM_COUNT=1
 
 # 日志设置
-log_file="${RESULT_BASE}/batch_run_$(date +%Y%m%d_%H%M%S).log"
+log_file="${LOG_PATH}/RUN_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$log_file") 2>&1
 
 echo "========== $(date) =========="
