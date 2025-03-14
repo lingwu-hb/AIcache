@@ -38,13 +38,33 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 done
 sleep 10 # 等待fio进程启动
 
-# 轮询等待所有FIO测试结束
-# echo -e "${INFO} 轮询等待所有FIO测试结束..."
-while [ $(ps aux | grep "fio_result.log" | grep -v grep | wc -l) -gt 0 ]; do
+# # 轮询等待所有FIO测试结束
+# # echo -e "${INFO} 轮询等待所有FIO测试结束..."
+# while [ $(ps aux | grep "fio_result.log" | grep -v grep | wc -l) -gt 0 ]; do
+#     sleep 10
+#     echo -n "."
+# done
+# echo
+
+# 等待FIO测试完成
+echo -e "${INFO} 等待FIO测试完成..."
+while true; do
+    fio_running=0
+    for disk in "${test_disk[@]}"; do
+        # 检查FIO进程是否还在运行
+        if exec_vm "test -f ${FIO_RESULT_LOG}/${disk}/fio.pid && ps -p \$(cat ${FIO_RESULT_LOG}/${disk}/fio.pid) >/dev/null 2>&1"; then
+            fio_running=1
+            break
+        fi
+    done
+
+    if [ $fio_running -eq 0 ]; then
+        break
+    fi
+
     sleep 10
     echo -n "."
 done
-echo
 
 echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
