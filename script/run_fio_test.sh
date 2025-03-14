@@ -42,7 +42,7 @@ for disk in "${test_disk[@]}"; do
         echo "start fio seq test"
         exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
-            fio -filename=/dev/${disk} \
+            nohup fio -filename=/dev/${disk} \
                 -direct=1 \
                 -bs=4k \
                 -iodepth=128 \
@@ -54,12 +54,13 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log"
+                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
+            echo \$! > ${FIO_RESULT_LOG}/${disk}/fio.pid"
     else
         echo "start fio real trace ${FIO_REPLAY_TRACE} replay"
         exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
-            fio -replay_redirect=/dev/${disk} \
+            nohup fio -replay_redirect=/dev/${disk} \
                 -direct=1 \
                 -iodepth=128 \
                 -thread \
@@ -70,6 +71,7 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log"
+                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
+            echo \$! > ${FIO_RESULT_LOG}/${disk}/fio.pid"
     fi
 done
