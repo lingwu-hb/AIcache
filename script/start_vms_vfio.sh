@@ -250,4 +250,17 @@ while [ "$all_passed" = false ]; do
         fi
     done
 done
+[INFO] 检查VM基本功能...
+
+VM已完全就绪，用时秒
+========== 测试算法: das-bind ==========
+========== 测试:das-bind ali-dev-5.txt (缓存: 91) ==========
+
+[INFO]调整cache size...
+error: Guest agent is not responding: QEMU guest agent is not connected
+error: Guest agent is not responding: QEMU guest agent is not connected
+[WARNING] VM1 无nvme设备
+error: Guest agent is not responding: QEMU guest agent is not connected
+error: Guest agent is not responding: QEMU guest agent is not connected
+
 echo -e "\nVM已完全就绪，用时${elapsed}秒"
