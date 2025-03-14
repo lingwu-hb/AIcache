@@ -39,6 +39,7 @@ done
 sleep 10 # 等待fio进程启动
 
 # 轮询等待所有FIO测试结束
+fio_start_time=$(date +%s)
 echo -e "${INFO} 等待所有FIO测试结束..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
     while true; do
@@ -47,8 +48,9 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
         if [ ! -z "$fio_complete" ]; then
             break
         fi
-        sleep 10
-        echo -n "."
+        sleep 5
+        elapsed=$(($(date +%s) - fio_start_time))
+        echo -n "已执行 ${elapsed}秒 ."
     done
 done
 echo
