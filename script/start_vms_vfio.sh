@@ -180,42 +180,50 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 
     # 准备bdev
     if [[ ${VM_NUM} == 5 ]]; then
-        mkdir -p /var/run/${VM_LIST[$i]}
-        ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
-        ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * ($i + 1) - 1)) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1) - 1))) 512
-        ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * (i + 1))) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1)))) 512
+        # mkdir -p /var/run/${VM_LIST[$i]}
+        # ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
+        # ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * ($i + 1) - 1)) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1) - 1))) 512
+        # ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * (i + 1))) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1)))) 512
 
-        if [[ ${PATTERN} == das ]]; then
-            ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((2 * ($i + 1) - 1)) wt ${CACHE_DEVICE}p0 core$((2 * (i + 1) - 1)) --cache-line-size ${CACHE_LINE_SIZE}
-            sleep 30
-            ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((2 * (i + 1))) wt ${CACHE_DEVICE}p0 core$((2 * (i + 1))) --cache-line-size ${CACHE_LINE_SIZE}
-            sleep 30
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) CAS$((2 * (i + 1) - 1))
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) CAS$((2 * (i + 1)))
-        elif [[ ${PATTERN} == baseline ]]; then
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1) - 1))
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1)))
-        else
-            echo -e "${ERROR} Unsupported test pattern, exit"
-            exit 1
-        fi
-        ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
+        # if [[ ${PATTERN} == das ]]; then
+        #     ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((2 * ($i + 1) - 1)) wt ${CACHE_DEVICE}p0 core$((2 * (i + 1) - 1)) --cache-line-size ${CACHE_LINE_SIZE}
+        #     sleep 30
+        #     ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((2 * (i + 1))) wt ${CACHE_DEVICE}p0 core$((2 * (i + 1))) --cache-line-size ${CACHE_LINE_SIZE}
+        #     sleep 30
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) CAS$((2 * (i + 1) - 1))
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) CAS$((2 * (i + 1)))
+        # elif [[ ${PATTERN} == baseline ]]; then
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1) - 1))
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device$((i + 1)) core$((2 * (i + 1)))
+        # else
+        #     echo -e "${ERROR} Unsupported test pattern, exit"
+        #     exit 1
+        # fi
+        # ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
     elif [[ ${VM_NUM} == 1 ]]; then
         mkdir -p /var/run/${VM_LIST[$i]}
-        ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
+        # ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
+        # ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((i + 1)) ${RBD_POOL} vm01 512
+        # sleep 3
+
+        # if [[ ${PATTERN} == baseline ]]; then
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
+        # else
+        #     ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
+        #     sleep 5 # 确保bdev_ocf_create完成
+        #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
+        # fi
+        # ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
+        
+        # TODO：
         ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((i + 1)) ${RBD_POOL} vm01 512
-        sleep 3
+        ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
 
-        if [[ ${PATTERN} == baseline ]]; then
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) core$((i + 1))
-        else
-            ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
-            sleep 5 # 确保bdev_ocf_create完成
-            ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
-        fi
-        ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
+        scripts/rpc.py nvmf_create_transport -t VFIOUSER
+        scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
+        scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1 #这里写死了
+        scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
     fi
-
     # 启动虚拟机
     virsh define ${VM_CONFIG_PATH}/${VM_LIST[$i]}.xml
     echo 3 >/proc/sys/vm/drop_caches
