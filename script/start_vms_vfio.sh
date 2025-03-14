@@ -235,32 +235,45 @@ while ! virsh list --all | grep ${vm_name}; do
 done
 
 # vm已经RUNNING，检查基本命令是否可用
-echo -e "${INFO} 检查VM基本功能..."
+echo -e "${INFO} 检查VM基本功能和Guest Agent状态..."
 check_commands=("echo 1" "ls /" "cat /proc/cpuinfo" "free -h")
 all_passed=false
-while [ "$all_passed" = false ]; do
-    all_passed=true
-    for cmd in "${check_commands[@]}"; do
-        if ! exec_vm "${vm_name}" "$cmd" &>/dev/null; then
-            all_passed=false
+guest_agent_ready=false
+start_time=$(date +%s)
+
+while [ "$all_passed" = false ] || [ "$guest_agent_ready" = false ]; do
+    # 检查基本命令
+    if [ "$all_passed" = false ]; then
+        all_passed=true
+        for cmd in "${check_commands[@]}"; do
+            if ! exec_vm "${vm_name}" "$cmd" &>/dev/null; then
+                all_passed=false
+                elapsed=$(($(date +%s) - start_time))
+                echo -ne "\r等待命令可用 ($cmd)... ${elapsed}秒"
+                sleep 1
+                break
+            fi
+        done
+    fi
+
+    # 检查guest agent状态
+    if [ "$guest_agent_ready" = false ]; then
+        if virsh qemu-agent-command "${vm_name}" '{"execute":"guest-info"}' &>/dev/null; then
+            guest_agent_ready=true
+            echo -e "\n${INFO} Guest Agent已就绪"
+        else
             elapsed=$(($(date +%s) - start_time))
-            echo -ne "\r等待命令可用 ($cmd)... ${elapsed}秒"
+            echo -ne "\r等待Guest Agent就绪... ${elapsed}秒"
             sleep 1
-            break
         fi
-    done
+    fi
+
+    # 超时检查（5分钟）
+    if [ $(($(date +%s) - start_time)) -gt 300 ]; then
+        echo -e "\n${ERROR} VM启动超时（5分钟），请检查系统状态"
+        exit 1
+    fi
 done
-[INFO] 检查VM基本功能...
 
-VM已完全就绪，用时秒
-========== 测试算法: das-bind ==========
-========== 测试:das-bind ali-dev-5.txt (缓存: 91) ==========
-
-[INFO]调整cache size...
-error: Guest agent is not responding: QEMU guest agent is not connected
-error: Guest agent is not responding: QEMU guest agent is not connected
-[WARNING] VM1 无nvme设备
-error: Guest agent is not responding: QEMU guest agent is not connected
-error: Guest agent is not responding: QEMU guest agent is not connected
-
-echo -e "\nVM已完全就绪，用时${elapsed}秒"
+elapsed=$(($(date +%s) - start_time))
+echo -e "\n${INFO} VM已完全就绪，用时${elapsed}秒"
