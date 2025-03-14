@@ -62,8 +62,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     result_dir=${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}/${TIME_STAMP}
     mkdir -p ${result_dir}
 
-    # 直接复制，不显示详细过程
-    exec_vm "${VM_LIST[$i]}" "cp -r ${fio_result_log}/*/* ${result_dir}/"
+    scp -r root@${VM_IP[$i]}:${fio_result_log}/*/* ${result_dir}/
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
     for result_file in ${result_dir}/*_fio_result.log; do
@@ -73,7 +72,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     done
 done
 
-echo -e "\n${INFO} 测试完成"
+echo -e "\n${INFO} ${FIO_REPLAY_TRACE}测试完成"
 echo -e "${INFO} 结果目录: ${result_dir}"
 
 # 收集缓存加速存储（CAS）日志和I/O统计
