@@ -38,14 +38,18 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 done
 sleep 10 # 等待fio进程启动
 
-# 实现到run_fio_test.sh中:
-# # 轮询等待所有FIO测试结束
-# # echo -e "${INFO} 轮询等待所有FIO测试结束..."
-# while [ $(ps aux | grep "fio_result.log" | grep -v grep | wc -l) -gt 0 ]; do
-#     sleep 10
-#     echo -n "."
-# done
-# echo
+# 轮询等待所有FIO测试结束
+echo -e "${INFO} 轮询等待所有FIO测试结束..."
+for ((i = 0; i < ${#VM_IP[@]}; i++)); do
+    while true; do
+        # 检查虚拟机内的fio进程是否存在
+        pid_exists=$(exec_vm "vm0$((i + 1))" "if [ -f ${fio_result_log}/*/fio.pid ]; then pid=\$(cat ${fio_result_log}/*/fio.pid); ps -p \$pid >/dev/null 2>&1 && echo 1 || echo 0; else echo 0; fi")
+        if [ "$pid_exists" = "0" ]; then
+            break
+        fi
+        sleep 10
+    done
+done
 
 echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do

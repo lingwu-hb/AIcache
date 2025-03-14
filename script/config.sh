@@ -137,27 +137,16 @@ exec_vm() {
     # 提取PID
     local PID=$(echo "$EXEC_OUT" | grep -o '"pid":[0-9]*' | cut -d':' -f2)
 
-    # 循环获取命令执行结果，直到命令执行完成
-    while true; do
-        local RESULT=$(virsh qemu-agent-command "$VM_NAME" "{
-            \"execute\": \"guest-exec-status\",
-            \"arguments\": {
-                \"pid\": $PID
-            }
-        }")
+    # 获取命令执行结果
+    local RESULT=$(virsh qemu-agent-command "$VM_NAME" "{
+        \"execute\": \"guest-exec-status\",
+        \"arguments\": {
+            \"pid\": $PID
+        }
+    }")
 
-        # 提取并显示输出
-        echo "$RESULT" | grep -o '"out-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
-        echo "$RESULT" | grep -o '"err-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
-
-        # 检查是否执行完成
-        if echo "$RESULT" | grep -q '"exited":true'; then
-            break
-        fi
-
-        # 等待一秒再检查
-        sleep 1
-    done
+    # 提取实际输出 (需要base64解码)
+    echo "$RESULT" | grep -o '"out-data":"[^"]*"' | cut -d'"' -f4 | base64 -d
 }
 
 # Export helper functions
