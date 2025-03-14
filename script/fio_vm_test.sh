@@ -46,6 +46,8 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
         # 检查fio结果文件是否包含Complete字样
         fio_complete=$(exec_vm "${VM_LIST[$i]}" "grep -l 'Run status group 0 (all jobs):' ${fio_result_log}/*/fio_result.log 2>/dev/null || echo ''")
         if [ ! -z "$fio_complete" ]; then
+            echo -e "\n${INFO} VM ${VM_LIST[$i]} 的FIO测试完成"
+            echo -e "${INFO} 结果位于VM内: ${fio_result_log}"
             break
         fi
         sleep 5
@@ -59,18 +61,20 @@ echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
     result_dir=${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
     mkdir -p ${result_dir}
+    echo -e "${INFO} 从VM ${VM_LIST[$i]} 复制结果到主机目录: ${result_dir}"
     exec_vm "${VM_LIST[$i]}" "cp -r ${fio_result_log}/* ${result_dir}"
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
     for result_file in ${result_dir}/*_fio_result.log; do
         if [ -f "$result_file" ]; then
             echo -e "\n# TEST_METADATA: CACHE_SIZE=${CACHE_SIZE}, TIMESTAMP=${TIME_STAMP}" >>"$result_file"
-            echo -e "${INFO} FIO结果写入到: ${result_file}"
+            echo -e "${INFO} FIO结果文件: ${result_file}"
         fi
     done
 done
 
-echo -e "${INFO} 测试结果目录: ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}"
+echo -e "${INFO} 主机端结果目录: ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}"
+echo -e "${INFO} VM端结果目录: ${fio_result_log}"
 
 # 收集缓存加速存储（CAS）日志和I/O统计
 if [[ ${PATTERN} != baseline ]]; then
