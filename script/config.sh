@@ -114,8 +114,15 @@ init_env() {
 
 # 辅助函数：执行命令并获取输出
 exec_vm() {
-    local VM_NAME=${1:-"vm01"}
-    local CMD=$2
+    if [ $# -eq 1 ]; then
+        # 如果只有一个参数，那就是命令，VM使用默认值
+        local VM_NAME="vm01"
+        local CMD=$1
+    else
+        # 如果有两个参数，第一个是VM名称，第二个是命令
+        local VM_NAME=$1
+        local CMD=$2
+    fi
 
     # 执行命令并获取PID
     local EXEC_OUT=$(virsh qemu-agent-command "$VM_NAME" "{
