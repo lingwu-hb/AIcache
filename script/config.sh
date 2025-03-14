@@ -14,7 +14,7 @@ export SPDK_PATH=${SPDK_PATH:-"${HOME_PATH}/spdk"}
 export TRACE_PATH=${TRACE_PATH:-"/home/b00669757/traces"}
 
 # VM configurations
-export VM_CONFIG_PATH=${VM_CONFIG_PATH:-"${HOME_PATH}/AICache-tools/"}
+export VM_CONFIG_PATH=${VM_CONFIG_PATH:-"${HOME_PATH}/AICache-tools"}
 export VM_BASE_IP="192.168.122"
 export VM_START_IP=201
 export VM_SSH_PASS="openEuler12#$"
