@@ -59,22 +59,22 @@ echo
 
 echo -e "${INFO} 复制测试结果到主机..."
 for ((i = 0; i < ${VM_NUM}; i++)); do
-    result_dir=${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}
+    result_dir=${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}/${TIME_STAMP}
     mkdir -p ${result_dir}
-    echo -e "${INFO} 从VM ${VM_LIST[$i]} 复制结果到主机目录: ${result_dir}"
-    exec_vm "${VM_LIST[$i]}" "cp -r ${fio_result_log}/* ${result_dir}"
+
+    # 直接复制，不显示详细过程
+    exec_vm "${VM_LIST[$i]}" "cp -r ${fio_result_log}/*/* ${result_dir}/"
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
     for result_file in ${result_dir}/*_fio_result.log; do
         if [ -f "$result_file" ]; then
             echo -e "\n# TEST_METADATA: CACHE_SIZE=${CACHE_SIZE}, TIMESTAMP=${TIME_STAMP}" >>"$result_file"
-            echo -e "${INFO} FIO结果文件: ${result_file}"
         fi
     done
 done
 
-echo -e "${INFO} 主机端结果目录: ${FIO_PATH}/${PATTERN}+${FIO_REPLAY_TRACE}"
-echo -e "${INFO} VM端结果目录: ${fio_result_log}"
+echo -e "\n${INFO} 测试完成"
+echo -e "${INFO} 结果目录: ${result_dir}"
 
 # 收集缓存加速存储（CAS）日志和I/O统计
 if [[ ${PATTERN} != baseline ]]; then
