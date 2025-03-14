@@ -42,7 +42,7 @@ for disk in "${test_disk[@]}"; do
         echo "start fio seq test"
         exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
-            nohup fio -filename=/dev/${disk} \
+            fio -filename=/dev/${disk} \
                 -direct=1 \
                 -bs=4k \
                 -iodepth=128 \
@@ -54,13 +54,17 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
+                -status-interval=1 \
+                2>&1 | tee >(nc -l -p 12345) ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
             echo \$! > ${FIO_RESULT_LOG}/${disk}/fio.pid"
+
+        # 在主机端监听输出
+        nc localhost 12345 &
     else
         echo "start fio real trace ${FIO_REPLAY_TRACE} replay"
         exec_vm "mkdir -p ${FIO_RESULT_LOG}/${disk} && \
             cd ${FIO_RESULT_LOG}/${disk} && \
-            nohup fio -replay_redirect=/dev/${disk} \
+            fio -replay_redirect=/dev/${disk} \
                 -direct=1 \
                 -iodepth=128 \
                 -thread \
@@ -71,7 +75,26 @@ for disk in "${test_disk[@]}"; do
                 -write_bw_log=fiotest \
                 -write_lat_log=fiotest \
                 -write_iops_log=fiotest \
-                2>&1 | tee ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
+                -status-interval=1 \
+                2>&1 | tee >(nc -l -p 12345) ${FIO_RESULT_LOG}/${disk}/fio_result.log & \
             echo \$! > ${FIO_RESULT_LOG}/${disk}/fio.pid"
+
+        # 在主机端监听输出
+        nc localhost 12345 &
     fi
+done
+
+# 等待所有FIO任务完成
+for disk in "${test_disk[@]}"; do
+    # 等待FIO进程结束
+    exec_vm "while kill -0 \$(cat ${FIO_RESULT_LOG}/${disk}/fio.pid) 2>/dev/null; do sleep 1; done"
+done
+
+# 打印日志文件位置
+echo -e "\n${INFO} FIO测试完成！日志文件位置："
+for disk in "${test_disk[@]}"; do
+    echo "- ${FIO_RESULT_LOG}/${disk}/fio_result.log (主要结果)"
+    echo "  ${FIO_RESULT_LOG}/${disk}/fiotest_bw.log (带宽日志)"
+    echo "  ${FIO_RESULT_LOG}/${disk}/fiotest_lat.log (延迟日志)"
+    echo "  ${FIO_RESULT_LOG}/${disk}/fiotest_iops.log (IOPS日志)"
 done
