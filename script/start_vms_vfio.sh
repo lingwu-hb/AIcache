@@ -94,7 +94,7 @@ fi
 
 # SPDK setup
 cd ${SPDK_PATH}
-spdk_branch=$(git branch | grep "*" | xargs)
+spdk_branch=$(git branch --show-current)
 
 echo -e "${INFO} SPDK branch: ${spdk_branch}"
 
@@ -234,10 +234,20 @@ while ! virsh list --all | grep ${vm_name}; do
     sleep 1
 done
 
-# vm已经RUNNING，再检查连接
-while ! exec_vm "${vm_name}" "echo 1" 2>/dev/null; do
-    elapsed=$(($(date +%s) - start_time))
-    echo -ne "\r等待就绪... ${elapsed}秒"
-    sleep 1
+# vm已经RUNNING，检查基本命令是否可用
+echo -e "${INFO} 检查VM基本功能..."
+check_commands=("echo 1" "ls /" "cat /proc/cpuinfo" "free -h")
+all_passed=false
+while [ "$all_passed" = false ]; do
+    all_passed=true
+    for cmd in "${check_commands[@]}"; do
+        if ! exec_vm "${vm_name}" "$cmd" &>/dev/null; then
+            all_passed=false
+            elapsed=$(($(date +%s) - start_time))
+            echo -ne "\r等待命令可用 ($cmd)... ${elapsed}秒"
+            sleep 1
+            break
+        fi
+    done
 done
-echo -e "\nVM已就绪，用时${elapsed}秒"
+echo -e "\nVM已完全就绪，用时${elapsed}秒"

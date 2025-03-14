@@ -71,31 +71,27 @@ for algo in "${algo_config[@]}"; do
         echo "========== 测试:$algo $trace_file (缓存: $cache_size) =========="
 
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
-        if [ "$first_run" != "true" ]; then
-            echo -e "\n${INFO}调整cache size..."
-            retry_count=0
-            max_retries=3
-            success=false
+        echo -e "\n${INFO}调整cache size..."
+        retry_count=0
+        max_retries=3
+        success=false
 
-            while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
-                ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
-                if [ $? -eq 0 ]; then
-                    success=true
-                else
-                    retry_count=$((retry_count + 1))
-                    if [ $retry_count -lt $max_retries ]; then
-                        echo -e "\n${WARNING}调整cache size失败,等待10秒后重试 (尝试 $retry_count/$max_retries)"
-                        sleep 10
-                    fi
+        while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+            ${SCRIPT_DIR}/reload_nvme.sh --cache-size "$cache_size" --vm-ids "$VM_COUNT"
+            if [ $? -eq 0 ]; then
+                success=true
+            else
+                retry_count=$((retry_count + 1))
+                if [ $retry_count -lt $max_retries ]; then
+                    echo -e "\n${WARNING}调整cache size失败,等待10秒后重试 (尝试 $retry_count/$max_retries)"
+                    sleep 10
                 fi
-            done
-
-            if [ "$success" = false ]; then
-                echo -e "\n${ERROR}调整cache size连续${max_retries}次失败"
-                continue
             fi
-        else
-            first_run=false
+        done
+
+        if [ "$success" = false ]; then
+            echo -e "\n${ERROR}调整cache size连续${max_retries}次失败"
+            continue
         fi
 
         # 执行FIO测试
