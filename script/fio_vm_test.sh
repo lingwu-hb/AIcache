@@ -50,9 +50,9 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
             echo -e "${INFO} 结果位于VM内: ${fio_result_log}"
             break
         fi
-        sleep 5
+        sleep 1
         elapsed=$(($(date +%s) - fio_start_time))
-        echo -n "已执行 ${elapsed}秒 ."
+        echo -ne "\r${INFO} 已执行 ${elapsed}秒..."
     done
 done
 echo
