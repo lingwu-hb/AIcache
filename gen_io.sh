@@ -1,4 +1,4 @@
-#!/bin/bash
+# 示例路径：rawfio/das-bind+ali-dev-3.txt/0317_1905/fio_result.log
 
 # Source configuration
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
@@ -14,14 +14,12 @@ current_date=$(date +%Y-%m-%d 2>/dev/null || echo "unknown_date")
 output_dir_with_date="${CSV_PATH}/${current_date}"
 mkdir -p "$output_dir_with_date"
 
-# TODO: 考虑在文件名中增加使用的算法模式
-
 # 定义汇总的 CSV 文件路径
 summary_csv="${output_dir_with_date}/result_${timestamp}.csv"
 temp_csv="${output_dir_with_date}/temp_${timestamp}.csv"
 
 # 初始化汇总 CSV 文件，写入表头
-echo "Trace,Cache Size,Pattern,Algorithm,Cache Config,VM Type,KIOPS,BW(MiB/s),Timestamp,Test Duration" >"$summary_csv"
+echo "Trace,Cache Size,KIOPS,BW(MiB/s),Timestamp,Pattern,Algorithm,VM Type" >"$summary_csv"
 
 # 定义 Trace 和缓存大小的映射关系
 declare -A replay_trace_config=(
@@ -59,6 +57,7 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     # 提取路径信息
     dir_path=$(dirname "$(dirname "$file")")
     pattern_full=$(basename "$dir_path")
+    timestamp_dir=$(basename "$(dirname "$file")")
 
     # 提取算法和配置信息（在+号之前的部分）
     config_part=${pattern_full%%+*}
@@ -118,24 +117,22 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
         bw=$(echo "$bw * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
-    # 提取测试元数据
-    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "unknown")
-    test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
+    # 使用时间戳目录作为时间戳
+    test_timestamp=$timestamp_dir
 
-    # 存储测试结果（确保每个字段都有值，即使是空值）
-    result_line="$pattern,$algorithm,$cache_config,$vm_type,$kiops,$bw,$test_timestamp,$test_duration"
+    # 存储测试结果（按新格式存储）
+    result_line="$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type"
     test_results[$trace_name]=$result_line
 
     echo "Processing $file:"
     echo "  Trace: $trace_name"
-    echo "  Pattern: $pattern"
-    echo "  Algorithm: $algorithm"
-    echo "  Cache Config: $cache_config"
-    echo "  VM Type: $vm_type"
     echo "  KIOPS: $kiops"
     echo "  BW(MiB/s): $bw"
     echo "  Timestamp: $test_timestamp"
-    echo "  Duration: $test_duration"
+    echo "  Pattern: $pattern"
+    echo "  Algorithm: $algorithm"
+    echo "  VM Type: $vm_type"
+    echo "  Cache Size: $cache_sizes"
 done
 
 # 创建临时文件存储所有结果
@@ -150,13 +147,12 @@ for trace_name in $(echo "${!replay_trace_config[@]}" | tr ' ' '\n' | sort); do
     if [ -n "$result" ]; then
         echo "$trace_name,$cache_sizes,$result" >>"$temp_csv"
     else
-        echo "$trace_name,$cache_sizes,,,,,,,,," >>"$temp_csv"
+        echo "$trace_name,$cache_sizes,,,,,," >>"$temp_csv"
     fi
 done
 
 # 写入表头和排序后的结果到最终文件
-echo "Trace,Cache Size,Pattern,Algorithm,Cache Config,VM Type,KIOPS,BW(MiB/s),Timestamp,Test Duration" >"$summary_csv"
-cat "$temp_csv" >>"$summary_csv"
+cat "$summary_csv" "$temp_csv" >"${summary_csv}.tmp" && mv "${summary_csv}.tmp" "$summary_csv"
 
 # 清理临时文件
 rm -f "$temp_csv"
