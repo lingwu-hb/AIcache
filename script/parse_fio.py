@@ -7,14 +7,18 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# 从环境变量获取配置
-FIO_PATH = os.getenv('FIO_PATH', '')
-CSV_PATH = os.getenv('CSV_PATH', '')
+# 从环境变量获取配置，如果没有设置则使用默认值
+FIO_PATH = os.getenv('FIO_PATH', '/home/lzq/AICache-tools/rawfio')
+CSV_PATH = os.getenv('CSV_PATH', '/home/lzq/AICache-tools/csv')
 
-# 检查配置
-if not FIO_PATH or not CSV_PATH:
-    print("错误: 环境变量FIO_PATH或CSV_PATH未设置")
+# 检查目录是否存在
+if not os.path.exists(FIO_PATH):
+    print(f"错误: FIO结果目录不存在: {FIO_PATH}")
     sys.exit(1)
+
+if not os.path.exists(CSV_PATH):
+    print(f"创建CSV输出目录: {CSV_PATH}")
+    os.makedirs(CSV_PATH, exist_ok=True)
 
 # 创建输出目录
 current_date = datetime.now().strftime('%Y-%m-%d')
