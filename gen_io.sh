@@ -18,6 +18,9 @@ mkdir -p "$output_dir_with_date"
 summary_csv="${output_dir_with_date}/result_${timestamp}.csv"
 temp_csv="${output_dir_with_date}/temp_${timestamp}.csv"
 
+# 创建临时文件存储所有结果
+>"$temp_csv"
+
 # 初始化汇总 CSV 文件，写入表头
 echo "Trace,Cache Size,KIOPS,BW(MiB/s),Timestamp,Pattern,Algorithm,VM Type" >"$summary_csv"
 
@@ -48,9 +51,6 @@ declare -A replay_trace_config=(
     ["ali-dev-3.txt"]="8400"
     ["ali-dev-5.txt"]="91"
 )
-
-# 创建关联数组存储测试结果
-declare -A test_results
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
 find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
@@ -121,8 +121,8 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     test_timestamp=$timestamp_dir
 
     # 存储测试结果（按新格式存储）
-    result_line="$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type"
-    test_results[$trace_name]=$result_line
+    # 直接写入临时文件，不使用关联数组
+    echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type" >>"$temp_csv"
 
     echo "Processing $file:"
     echo "  Trace: $trace_name"
@@ -135,26 +135,13 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     echo "  Cache Size: $cache_sizes"
 done
 
-# 创建临时文件存储所有结果
->"$temp_csv"
+# 对临时文件进行排序（按trace名称排序）
+sort -t',' -k1 "$temp_csv" >"${temp_csv}.sorted"
 
-# 按字典序遍历所有配置的trace
-for trace_name in $(echo "${!replay_trace_config[@]}" | tr ' ' '\n' | sort); do
-    cache_sizes=${replay_trace_config[$trace_name]}
-    result=${test_results[$trace_name]}
-
-    # 如果有测试结果，写入结果；如果没有，写入空值
-    if [ -n "$result" ]; then
-        echo "$trace_name,$cache_sizes,$result" >>"$temp_csv"
-    else
-        echo "$trace_name,$cache_sizes,,,,,," >>"$temp_csv"
-    fi
-done
-
-# 写入表头和排序后的结果到最终文件
-cat "$summary_csv" "$temp_csv" >"${summary_csv}.tmp" && mv "${summary_csv}.tmp" "$summary_csv"
+# 合并表头和排序后的数据
+cat "$summary_csv" "${temp_csv}.sorted" >"${summary_csv}.tmp" && mv "${summary_csv}.tmp" "$summary_csv"
 
 # 清理临时文件
-rm -f "$temp_csv"
+rm -f "$temp_csv" "${temp_csv}.sorted"
 
 echo "All files processed. Summary CSV saved to $summary_csv"
