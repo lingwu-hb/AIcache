@@ -60,10 +60,6 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     dir_path=$(dirname "$(dirname "$file")")
     pattern_full=$(basename "$dir_path")
 
-    # 从路径中提取信息
-    # 示例路径: das-bind+ali-dev-5.txt/fio_result.log
-    # 或者: kvm_8u16g_ocf_seq_large+ali-dev-5.txt/0317_1105/fio_result.log
-
     # 提取算法和配置信息（在+号之前的部分）
     config_part=${pattern_full%%+*}
 
@@ -72,17 +68,24 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
 
     # 解析配置部分
     if [[ $config_part == *"_"* ]]; then
-        # 新格式：kvm_8u16g_ocf_seq_large
+        # 新格式：vm_type_cache_config_algorithm_pattern
         vm_type=$(echo "$config_part" | cut -d'_' -f1)
         cache_config=$(echo "$config_part" | cut -d'_' -f2)
         algorithm=$(echo "$config_part" | cut -d'_' -f3)
         pattern=$(echo "$config_part" | cut -d'_' -f4-)
     else
-        # 旧格式：das-bind
-        algorithm=$config_part
-        vm_type="unknown"
-        cache_config="unknown"
-        pattern="unknown"
+        # 特殊格式：no_prefetch 或 das-bind
+        if [[ $config_part == "no_prefetch" ]]; then
+            vm_type="no"
+            cache_config="prefetch"
+            algorithm=""
+            pattern=""
+        else
+            algorithm=$config_part
+            vm_type="unknown"
+            cache_config="unknown"
+            pattern="unknown"
+        fi
     fi
 
     # 获取对应的缓存大小
@@ -95,27 +98,44 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     fi
 
     # 提取 IOPS 和 BW 的值
-    # IOPS格式示例: "read: IOPS=7538"
-    iops=$(grep -A1 "Starting 1 thread" "$file" | grep -oP 'read: IOPS=\K[0-9.]+' || echo "0")
+    # 格式示例: "read: IOPS=7538, BW=233MiB/s (244MB/s)"
+    read_line=$(grep -A1 "Starting 1 thread" "$file" | grep "read: IOPS=")
+
+    # 提取IOPS
+    if [[ $read_line =~ IOPS=([0-9.]+) ]]; then
+        iops=${BASH_REMATCH[1]}
+    else
+        iops=0
+    fi
 
     # 转换IOPS到KIOPS
     kiops=$(echo "scale=2; $iops / 1000" | bc)
 
-    # BW格式示例: "READ: bw=233MiB/s (244MB/s)"
-    bw=$(grep "READ: bw=" "$file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
-        grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
+    # 提取带宽值
+    if [[ $read_line =~ BW=([0-9.]+)MiB/s ]]; then
+        bw=${BASH_REMATCH[1]}
+    elif [[ $read_line =~ BW=([0-9.]+)MB/s ]]; then
+        # 如果是MB/s，转换为MiB/s
+        bw=$(echo "${BASH_REMATCH[1]} * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
+    else
+        bw=0
+    fi
 
-    # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
-    if grep "READ: bw=" "$file" | grep -q 'MB/s'; then
-        bw=$(echo "$bw * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
+    # 提取测试时长
+    if [[ $read_line =~ /([0-9]+)msec ]]; then
+        test_duration=${BASH_REMATCH[1]}
+    else
+        test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
     fi
 
     # 提取测试元数据
-    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "unknown")
-    test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
+    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' ||
+        basename "$(dirname "$file")" ||
+        echo "unknown")
 
-    # 存储测试结果
-    test_results["$trace_name"]="$pattern,$algorithm,$cache_config,$vm_type,$kiops,$bw,$test_timestamp,$test_duration"
+    # 存储测试结果（确保每个字段都有值，即使是空值）
+    result_line="$pattern,$algorithm,$cache_config,$vm_type,$kiops,$bw,$test_timestamp,$test_duration"
+    test_results[$trace_name]=$result_line
 
     echo "Processing $file:"
     echo "  Trace: $trace_name"
@@ -138,13 +158,11 @@ for trace_name in $(echo "${!replay_trace_config[@]}" | tr ' ' '\n' | sort); do
     result=${test_results[$trace_name]}
 
     # 如果有测试结果，写入结果；如果没有，写入空值
-    for cache_size in $cache_sizes; do
-        if [ -n "$result" ]; then
-            echo "$trace_name,$cache_size,$result" >>"$temp_csv"
-        else
-            echo "$trace_name,$cache_size,,,,,,,,," >>"$temp_csv"
-        fi
-    done
+    if [ -n "$result" ]; then
+        echo "$trace_name,$cache_sizes,$result" >>"$temp_csv"
+    else
+        echo "$trace_name,$cache_sizes,,,,,,,,," >>"$temp_csv"
+    fi
 done
 
 # 写入表头和排序后的结果到最终文件
