@@ -127,11 +127,19 @@ rm -f "$temp_csv" "${temp_csv}.sorted"
 
 echo "All files processed. Summary CSV saved to $summary_csv"
 
-# 转换CSV到XLSX
+# 转换CSV到XLSX并追加到结果文件
 if command -v python3 >/dev/null 2>&1; then
     echo "Converting CSV to XLSX..."
     chmod +x "${SCRIPT_DIR}/script/csv2xlsx.py"
+    chmod +x "${SCRIPT_DIR}/script/append_results.py"
+
+    # 先转换为xlsx
+    xlsx_file="${summary_csv%.csv}.xlsx"
     python3 "${SCRIPT_DIR}/script/csv2xlsx.py" "$summary_csv"
+
+    # 然后追加到汇总结果文件
+    echo "Appending results to summary file..."
+    python3 "${SCRIPT_DIR}/script/append_results.py" "$xlsx_file"
 else
-    echo "Warning: Python3 not found, skipping XLSX conversion"
+    echo "Warning: Python3 not found, skipping XLSX conversion and appending"
 fi
