@@ -4,6 +4,25 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
+# 帮助信息
+usage() {
+    echo "Usage: $0 [-e] [csv_file1] [csv_file2]"
+    echo "选项:"
+    echo "  -e    同时生成Excel文件（需要安装pandas和xlsxwriter）"
+    echo "如果不提供CSV文件参数，将自动比较当天最新的两个结果文件"
+    exit 1
+}
+
+# 解析参数
+EXCEL_OUTPUT=0
+while getopts "e" opt; do
+    case $opt in
+    e) EXCEL_OUTPUT=1 ;;
+    ?) usage ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 # 如果没有提供参数，自动查找最新的两个结果文件
 if [ "$#" -eq 0 ]; then
     # 获取当前日期目录
@@ -19,8 +38,7 @@ if [ "$#" -eq 0 ]; then
     files=($(ls -t ${csv_dir}/result_*.csv 2>/dev/null | head -n 2))
     if [ ${#files[@]} -lt 2 ]; then
         echo -e "${ERROR} 未找到足够的结果文件用于比较"
-        echo "Usage: $0 [csv_file1] [csv_file2]"
-        exit 1
+        usage
     fi
     csv_file1="${files[0]}"
     csv_file2="${files[1]}"
@@ -31,9 +49,7 @@ elif [ "$#" -eq 2 ]; then
     csv_file1="$1"
     csv_file2="$2"
 else
-    echo "Usage: $0 [csv_file1] [csv_file2]"
-    echo "如果不提供参数，将自动比较当天最新的两个结果文件"
-    exit 1
+    usage
 fi
 
 # 检查文件是否存在
@@ -98,12 +114,14 @@ if [ "$count" -gt 0 ]; then
     echo "IOPS: ${avg_iops_percent}%"
     echo "带宽: ${avg_bw_percent}%"
 
-    # 转换为Excel格式
-    echo -e "${INFO} 正在生成Excel文件..."
-    if python3 ${SCRIPT_DIR}/csv2xlsx.py "${output_csv}"; then
-        echo -e "${INFO} Excel文件已生成"
-    else
-        echo -e "${WARNING} Excel文件生成失败，请检查是否安装了必要的Python包"
-        echo "提示: pip3 install pandas xlsxwriter"
+    # 如果需要生成Excel文件
+    if [ "$EXCEL_OUTPUT" -eq 1 ]; then
+        echo -e "${INFO} 正在生成Excel文件..."
+        if python3 "${SCRIPT_DIR}/csv2xlsx.py" "${output_csv}"; then
+            echo -e "${INFO} Excel文件已生成"
+        else
+            echo -e "${WARNING} Excel文件生成失败，请检查是否安装了必要的Python包"
+            echo "提示: pip3 install pandas xlsxwriter"
+        fi
     fi
 fi

@@ -10,7 +10,7 @@ def csv_to_excel(csv_file):
     df = pd.read_csv(csv_file)
     
     # 创建同名的xlsx文件
-    excel_file = str(csv_file).replace('.csv', '.xlsx')
+    excel_file = csv_file.replace('.csv', '.xlsx')
     
     # 创建一个Excel writer对象
     writer = pd.ExcelWriter(excel_file, engine='xlsxwriter')

@@ -2,7 +2,7 @@
 
 # Source configuration
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-source ${SCRIPT_DIR}/config.sh
+source ${SCRIPT_DIR}/script/config.sh
 
 # 获取当前日期和时间（格式：YYYY-MM-DD_HH-MM-SS）
 timestamp=$(date +%Y-%m-%d_%H-%M-%S)
@@ -53,7 +53,7 @@ declare -A replay_trace_config=(
 # 规范的目录结构为 /home/hb/spdk_fio/result/8u16g_ocf_seq_large+ali-dev-5.txt/nvme0n1/fio_result.log
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
-find "$result_dir" -name "fio_result.log" | while read -r file; do
+find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     # 提取 pattern 和 fio_replay_trace
     dir_path=$(dirname "$(dirname "$file")")
     pattern_fio=$(basename "$dir_path")

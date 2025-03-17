@@ -1,33 +1,96 @@
-# Quick Start
+# AICache-tools 使用指南
 
-1. 停止和清理环境:
+## 环境配置
+
+所有路径配置都在 `config.sh` 中，使用前只需修改用户主目录路径即可。
+默认已配置 VM 的 SSH 免密登录。
+
+### 关键路径说明
+
+- `HOME_PATH`: 用户主目录，如 `/home/lzq`
+- `SPDK_PATH`: SPDK 安装目录，位于 `${HOME_PATH}/spdk`
+- `TRACE_PATH`: 测试 trace 文件目录，位于 `/home/b00669757/traces`
+- `VM_CONFIG_PATH`: 虚拟机配置目录，位于 `${HOME_PATH}/opencas_vm`
+- 测试结果目录: `${HOME_PATH}/spdk_fio/result`
+
+## 使用方法
+
+### 1. 环境准备
 
 ```bash
-/home/lzq/AICache-tools/script/stop_vms.sh
+# 停止和清理环境
+${HOME_PATH}/AICache-tools/script/stop_vms.sh
 ```
 
-2. 手动测:
+### 2. 手动测试模式
 
 ```bash
-# 先起SPDK
+# 1. 先启动 SPDK（根据实际环境手动启动）
 
-# 起VM
-/home/lzq/AICache-tools/script/vm_now.sh
+# 2. 启动虚拟机
+${HOME_PATH}/AICache-tools/script/vm_now.sh
 
-# 测试
-/home/lzq/AICache-tools/script/man_run.sh
+# 3. 执行测试
+${HOME_PATH}/AICache-tools/script/man_run.sh
 ```
 
-3. 批量测试:
+### 3. 批量测试模式
 
 ```bash
-/home/lzq/AICache-tools/script/RUN.sh
+# 一键执行批量测试
+${HOME_PATH}/AICache-tools/script/RUN.sh
 ```
 
-4. 监控 OCF 状态：
+### 4. 监控与分析
 
 ```bash
-/home/lzq/AICache-tools/script/monitor.py CAS1
+# 监控 OCF 状态
+${HOME_PATH}/AICache-tools/script/monitor.py CAS1
+
+# 结果比较和分析
+# 1. 只生成 CSV 比较结果（自动选择最新两个结果）
+./com_res.sh 
+
+# 2. 生成 CSV 和 Excel 格式结果
+./com_res.sh -e
+
+# 3. 比较指定的两个结果文件
+./com_res.sh -e file1.csv file2.csv
+```
+
+## 系统架构
+
+### 虚拟机配置
+
+- 虚拟机命名：`vmXX`（如：`vm01`）
+- IP 地址分配：`192.168.122.20X`（如：`192.168.122.201`）
+- 配置文件：`${VM_CONFIG_PATH}/vmXX.xml`
+- 运行时目录：`/var/run/vmXX`
+
+### 存储配置
+
+- 缓存设备：`nvme0n1`
+- PCIe 设备地址：`0000:83:00.0`
+- Ceph RBD 池：`vmdisk`
+
+### 日志与结果收集
+
+- SPDK 日志：`${SPDK_PATH}/log`
+- Trace 日志：`${SPDK_PATH}/trace_log`
+- FIO 测试结果（VM内）：`/root/fiotest`
+- 收集器目录：`${HOME_PATH}/spdk_fio/collectors`
+  - CAS 日志：`${COLLECTOR_BASE}/cas_log`
+  - IO 统计：`${COLLECTOR_BASE}/iostat`
+
+## 脚本调用关系
+
+```
+RUN.sh
+  ├── start_vms_vfio.sh  # 启动VM并配置VFIO
+  │   └── 循环启动虚拟机
+  ├── fio_vm_test.sh     # 执行测试
+  │   └── run_fio_test.sh（在VM内执行）
+  └── stop_vms.sh        # 清理环境
 ```
 
 # 问题
