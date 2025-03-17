@@ -41,16 +41,28 @@ def append_results(new_xlsx, result_xlsx='result.xlsx'):
         # 读取现有的结果文件
         if os.path.exists(result_xlsx):
             result_df = pd.read_excel(result_xlsx)
+            # 保存原始的Trace列顺序和内容
+            original_traces = result_df['Trace'].tolist()
+            
             # 基于Trace列合并数据
-            # how='outer' 确保保留所有行，包括不匹配的行
-            # on='Trace' 指定使用Trace列作为匹配键
-            result_df = pd.merge(result_df, new_data, on='Trace', how='outer')
+            # how='left' 确保只保留原始文件中的行，并按原始顺序
+            result_df = result_df.merge(new_data, on='Trace', how='left')
+            
+            # 对于新数据中存在但原始数据中不存在的Trace，添加新行
+            new_traces = new_data[~new_data['Trace'].isin(original_traces)]
+            if not new_traces.empty:
+                result_df = pd.concat([result_df, new_traces], ignore_index=True)
+            
+            # 确保Trace列的顺序和内容与原始文件完全一致
+            result_df = pd.concat([
+                result_df[result_df['Trace'].isin(original_traces)].set_index('Trace').reindex(original_traces).reset_index(),
+                result_df[~result_df['Trace'].isin(original_traces)]
+            ]).reset_index(drop=True)
         else:
             # 如果文件不存在，使用新数据创建
             result_df = new_data
-
-        # 确保结果按Trace排序
-        result_df = result_df.sort_values('Trace', ascending=True)
+            # 新文件才需要排序
+            result_df = result_df.sort_values('Trace', ascending=True)
 
         # 保存到Excel
         with pd.ExcelWriter(result_xlsx, engine='openpyxl') as writer:
