@@ -59,19 +59,31 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     # 提取路径信息
     dir_path=$(dirname "$(dirname "$file")")
     pattern_full=$(basename "$dir_path")
-    timestamp=$(basename "$(dirname "$file")")
 
     # 从路径中提取信息
-    # 格式: ${VM_TYPE}_${PATTERN}_${FIO_REPLAY_TRACE}/${TIME_STAMP}
-    # 例如: kvm_8u16g_ocf_seq_large_ali-dev-5.txt/0317_1105
-    vm_type=$(echo "$pattern_full" | cut -d'_' -f1)
-    cache_config=$(echo "$pattern_full" | cut -d'_' -f2)
-    algorithm=$(echo "$pattern_full" | cut -d'_' -f3)
-    pattern=$(echo "$pattern_full" | cut -d'_' -f4-)
-    pattern=${pattern%+*} # 移除+后的trace名称
+    # 示例路径: das-bind+ali-dev-5.txt/fio_result.log
+    # 或者: kvm_8u16g_ocf_seq_large+ali-dev-5.txt/0317_1105/fio_result.log
 
-    # 从路径中提取 Trace 名称
-    trace_name=$(echo "$pattern_full" | grep -oP '[^+]+\.txt')
+    # 提取算法和配置信息（在+号之前的部分）
+    config_part=${pattern_full%%+*}
+
+    # 提取trace名称（在+号之后的部分）
+    trace_name=${pattern_full#*+}
+
+    # 解析配置部分
+    if [[ $config_part == *"_"* ]]; then
+        # 新格式：kvm_8u16g_ocf_seq_large
+        vm_type=$(echo "$config_part" | cut -d'_' -f1)
+        cache_config=$(echo "$config_part" | cut -d'_' -f2)
+        algorithm=$(echo "$config_part" | cut -d'_' -f3)
+        pattern=$(echo "$config_part" | cut -d'_' -f4-)
+    else
+        # 旧格式：das-bind
+        algorithm=$config_part
+        vm_type="unknown"
+        cache_config="unknown"
+        pattern="unknown"
+    fi
 
     # 获取对应的缓存大小
     cache_sizes=${replay_trace_config[$trace_name]}
@@ -84,28 +96,37 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
 
     # 提取 IOPS 和 BW 的值
     # IOPS格式示例: "read: IOPS=7538"
-    iops=$(grep -oP 'read: IOPS=\K[0-9.]+' "$file" || echo "0")
+    iops=$(grep -A1 "Starting 1 thread" "$file" | grep -oP 'read: IOPS=\K[0-9.]+' || echo "0")
 
     # 转换IOPS到KIOPS
     kiops=$(echo "scale=2; $iops / 1000" | bc)
 
     # BW格式示例: "READ: bw=233MiB/s (244MB/s)"
-    bw=$(grep -A1 'Run status group 0' "$file" | grep 'READ' | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
-        grep -A1 'Run status group 0' "$file" | grep 'READ' | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
+    bw=$(grep "READ: bw=" "$file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
+        grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
 
     # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
-    if grep -A1 'Run status group 0' "$file" | grep 'READ' | grep -q 'MB/s'; then
+    if grep "READ: bw=" "$file" | grep -q 'MB/s'; then
         bw=$(echo "$bw * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
     # 提取测试元数据
-    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "$timestamp")
-    test_duration=$(grep "run-time" "$file" | grep -oP '\d+' || echo "unknown")
+    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "unknown")
+    test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
 
     # 存储测试结果
     test_results["$trace_name"]="$pattern,$algorithm,$cache_config,$vm_type,$kiops,$bw,$test_timestamp,$test_duration"
 
-    echo "Processed $file"
+    echo "Processing $file:"
+    echo "  Trace: $trace_name"
+    echo "  Pattern: $pattern"
+    echo "  Algorithm: $algorithm"
+    echo "  Cache Config: $cache_config"
+    echo "  VM Type: $vm_type"
+    echo "  KIOPS: $kiops"
+    echo "  BW(MiB/s): $bw"
+    echo "  Timestamp: $test_timestamp"
+    echo "  Duration: $test_duration"
 done
 
 # 创建临时文件存储所有结果
