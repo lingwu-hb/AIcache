@@ -179,7 +179,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
 
     # 准备bdev
     if [[ ${VM_NUM} == 5 ]]; then
-        # mkdir -p /var/run/${VM_LIST[$i]}
+        mkdir -p /var/run/${VM_LIST[$i]}
         # ${SPDK_PATH}/scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device$((i + 1)) -a -s sys$((i + 1)) -i 1 -I 32760
         # ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * ($i + 1) - 1)) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1) - 1))) 512
         # ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((2 * (i + 1))) ${RBD_POOL} vm$(printf "%02d" $((2 * ($i + 1)))) 512
