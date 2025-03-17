@@ -142,13 +142,14 @@ echo -e "${INFO} Cache Part:  ${CACHE_PARTITION}MB"
 echo -e "${INFO} ============================================================"
 
 # spdk/vfiouser process starting
+mkdir -p ${RESULT_BASE}/log
 datetime=$(date "+%m%d_%H%M")
 nqnuuid=$(date "+%H%M")
 
 #LD_PRELOAD=/usr/lib/gcc/aarch64-linux-gnu/7.3.0/libasan.so
 
 #-e enable record trace
-cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/nvmf_tgt -e vbdev_ocf >${LOG_PATH}/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
+cd ${SPDK_PATH} && LD_LIBRARY_PATH=${SPDK_PATH}/build/lib:${SPDK_PATH}/dpdk/build/lib:./ ${SPDK_PATH}/build/bin/nvmf_tgt -e vbdev_ocf >${RESULT_BASE}/log/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
 #cd ${SPDK_HOME} &&  LD_LIBRARY_PATH=build/lib:dpdk/build/lib:./ build/bin/nvmf_tgt -m ${CPU_MASK} -e vbdev_ocf > log/nvmf_${datetime}_${PATTERN}_${FIO_REPLAY_TRACE}.log 2>&1 & # core 60-63
 sleep 5
 
@@ -213,12 +214,11 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
         #     ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_ns nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) CAS$((i + 1))
         # fi
         # ${SPDK_PATH}/scripts/rpc.py nvmf_subsystem_add_listener nqn.2023-11.io.spdk:node${nqnuuid}$((i + 1)) -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
-
+        
         # TODO：
         ${SPDK_PATH}/scripts/rpc.py bdev_rbd_create -b core$((i + 1)) ${RBD_POOL} vm01 512
         ${SPDK_PATH}/scripts/rpc.py bdev_ocf_create CAS$((i + 1)) wt nvme0n1p0 core$((i + 1)) --cache-line-size ${CACHE_LINE_SIZE}
 
-        scripts/rpc.py nvmf_create_transport -t VFIOUSER
         scripts/rpc.py nvmf_create_subsystem nqn.2021-06.io.spdk:ctc_device1 -a -s sys1 -i 1 -I 32760
         scripts/rpc.py nvmf_subsystem_add_ns nqn.2021-06.io.spdk:ctc_device1 CAS1 #这里写死了
         scripts/rpc.py nvmf_subsystem_add_listener nqn.2021-06.io.spdk:ctc_device1 -t VFIOUSER -a /var/run/${VM_LIST[$i]} -s 0
