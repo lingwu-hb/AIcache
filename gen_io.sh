@@ -18,9 +18,10 @@ mkdir -p "$output_dir_with_date"
 
 # 定义汇总的 CSV 文件路径
 summary_csv="${output_dir_with_date}/result_${timestamp}.csv"
+temp_csv="${output_dir_with_date}/temp_${timestamp}.csv"
 
 # 初始化汇总 CSV 文件，写入表头
-echo "Trace,Cache Size,IOPS,BW(MiB/s)" >"$summary_csv"
+echo "Trace,Cache Size,Pattern,Algorithm,IOPS,BW(MiB/s),Timestamp,Test Duration" >"$summary_csv"
 
 # 定义 Trace 和缓存大小的映射关系
 declare -A replay_trace_config=(
@@ -50,16 +51,24 @@ declare -A replay_trace_config=(
     ["ali-dev-5.txt"]="91"
 )
 
+# 创建关联数组存储测试结果
+declare -A test_results
+
 # 规范的目录结构为 /home/hb/spdk_fio/result/8u16g_ocf_seq_large+ali-dev-5.txt/nvme0n1/fio_result.log
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
 find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     # 提取 pattern 和 fio_replay_trace
     dir_path=$(dirname "$(dirname "$file")")
-    pattern_fio=$(basename "$dir_path")
+    pattern_full=$(basename "$dir_path")
+
+    # 从完整pattern中提取算法信息和pattern
+    # 例如从 8u16g_ocf_seq_large+ali-dev-5.txt 提取信息
+    algorithm=$(echo "$pattern_full" | grep -oP '(?<=_)[^_]+(?=_)' || echo "unknown") # 提取ocf/das等
+    pattern=$(echo "$pattern_full" | grep -oP '^[^+]+' || echo "unknown")             # 提取整个pattern前缀
 
     # 从路径中提取 Trace 名称（支持 Trace 名称中包含下划线）
-    trace_name=$(echo "$pattern_fio" | grep -oP '[^+]+\.txt')
+    trace_name=$(echo "$pattern_full" | grep -oP '[^+]+\.txt')
 
     # 获取对应的缓存大小
     cache_sizes=${replay_trace_config[$trace_name]}
@@ -80,12 +89,39 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
         iops=$(echo "$iops * 1000" | bc)
     fi
 
-    # 将结果追加到汇总 CSV 文件
-    for cache_size in $cache_sizes; do
-        echo "$trace_name,$cache_size,$iops,$bw" >>"$summary_csv"
-    done
+    # 提取测试元数据
+    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "unknown")
+    test_duration=$(grep "run-time" "$file" | grep -oP '\d+' || echo "unknown")
+
+    # 存储测试结果
+    test_results["$trace_name"]="$pattern,$algorithm,$iops,$bw,$test_timestamp,$test_duration"
 
     echo "Processed $file"
 done
 
-echo "All files processed. Summary CSV saved to $summary_csv" #
+# 创建临时文件存储所有结果
+>"$temp_csv"
+
+# 按字典序遍历所有配置的trace
+for trace_name in $(echo "${!replay_trace_config[@]}" | tr ' ' '\n' | sort); do
+    cache_sizes=${replay_trace_config[$trace_name]}
+    result=${test_results[$trace_name]}
+
+    # 如果有测试结果，写入结果；如果没有，写入空值
+    for cache_size in $cache_sizes; do
+        if [ -n "$result" ]; then
+            echo "$trace_name,$cache_size,$result" >>"$temp_csv"
+        else
+            echo "$trace_name,$cache_size,,,,,," >>"$temp_csv"
+        fi
+    done
+done
+
+# 写入表头和排序后的结果到最终文件
+echo "Trace,Cache Size,Pattern,Algorithm,IOPS,BW(MiB/s),Timestamp,Test Duration" >"$summary_csv"
+cat "$temp_csv" >>"$summary_csv"
+
+# 清理临时文件
+rm -f "$temp_csv"
+
+echo "All files processed. Summary CSV saved to $summary_csv"

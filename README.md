@@ -1,4 +1,4 @@
-# AICache-tools 使用指南
+# AICache-tools 使用
 
 ## 环境配置
 
@@ -13,7 +13,7 @@
 - `VM_CONFIG_PATH`: 虚拟机配置目录，位于 `${HOME_PATH}/opencas_vm`
 - 测试结果目录: `${HOME_PATH}/spdk_fio/result`
 
-## 使用方法
+## Quick Start
 
 ### 1. 环境准备
 

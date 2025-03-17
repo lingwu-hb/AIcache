@@ -65,7 +65,7 @@ for ((i = 0; i < ${VM_NUM}; i++)); do
     scp -r root@${VM_IP[$i]}:${fio_result_log}/*/* ${result_dir}/
 
     # 将 CACHE_SIZE 和时间戳写入每个 FIO 结果文件的末尾
-    for result_file in ${result_dir}/*_fio_result.log; do
+    for result_file in ${result_dir}/*.log; do
         if [ -f "$result_file" ]; then
             echo -e "\n# TEST_METADATA: CACHE_SIZE=${CACHE_SIZE}, TIMESTAMP=${TIME_STAMP}" >>"$result_file"
         fi
