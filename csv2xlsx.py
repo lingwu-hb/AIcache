@@ -50,18 +50,18 @@ def csv_to_excel(csv_file):
     return excel_file
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: python csv2xlsx.py <csv_file>")
-        sys.exit(1)
+    # 获取当前目录下所有的csv文件
+    csv_files = Path('.').glob('*.csv')
     
-    csv_file = sys.argv[1]
-    if not Path(csv_file).exists():
-        print(f"Error: CSV file not found: {csv_file}")
-        sys.exit(1)
-    
-    try:
-        excel_file = csv_to_excel(csv_file)
-        print(f"Successfully converted to: {excel_file}")
-    except Exception as e:
-        print(f"Error converting file: {e}")
-        sys.exit(1) 
+    for csv_file in csv_files:
+        # 检查是否已经有对应的xlsx文件
+        xlsx_file = csv_file.with_suffix('.xlsx')
+        if xlsx_file.exists():
+            continue
+            
+        try:
+            excel_file = csv_to_excel(str(csv_file))
+            print(f"Successfully converted to: {excel_file}")
+        except Exception as e:
+            print(f"Error converting {csv_file}: {e}")
+            continue
