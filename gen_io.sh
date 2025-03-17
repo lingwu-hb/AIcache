@@ -1,5 +1,5 @@
 # 示例路径：rawfio/das-bind+ali-dev-3.txt/0317_1905/fio_result.log
-
+# 示例路径：rawfio/no_prefetch+ali-dev-3.txt/0317_1905/fio_result.log
 # Source configuration
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/script/config.sh
@@ -59,33 +59,14 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     pattern_full=$(basename "$dir_path")
     timestamp_dir=$(basename "$(dirname "$file")")
 
-    # 提取算法和配置信息（在+号之前的部分）
-    config_part=${pattern_full%%+*}
-
-    # 提取trace名称（在+号之后的部分）
+    # 提取算法名称（+号前的部分）和trace名称（+号后的部分）
+    algorithm=${pattern_full%%+*}
     trace_name=${pattern_full#*+}
 
-    # 解析配置部分
-    if [[ $config_part == *"_"* ]]; then
-        # 新格式：vm_type_cache_config_algorithm_pattern
-        vm_type=$(echo "$config_part" | cut -d'_' -f1)
-        cache_config=$(echo "$config_part" | cut -d'_' -f2)
-        algorithm=$(echo "$config_part" | cut -d'_' -f3)
-        pattern=$(echo "$config_part" | cut -d'_' -f4-)
-    else
-        # 特殊格式：no_prefetch 或 das-bind
-        if [[ $config_part == "no_prefetch" ]]; then
-            vm_type="no"
-            cache_config="prefetch"
-            algorithm=""
-            pattern=""
-        else
-            algorithm=$config_part
-            vm_type="unknown"
-            cache_config="unknown"
-            pattern="unknown"
-        fi
-    fi
+    # 设置其他字段的默认值
+    vm_type="unknown"
+    pattern="unknown"
+    cache_config="unknown"
 
     # 获取对应的缓存大小
     cache_sizes=${replay_trace_config[$trace_name]}
@@ -145,3 +126,12 @@ cat "$summary_csv" "${temp_csv}.sorted" >"${summary_csv}.tmp" && mv "${summary_c
 rm -f "$temp_csv" "${temp_csv}.sorted"
 
 echo "All files processed. Summary CSV saved to $summary_csv"
+
+# 转换CSV到XLSX
+if command -v python3 >/dev/null 2>&1; then
+    echo "Converting CSV to XLSX..."
+    chmod +x "${SCRIPT_DIR}/script/csv2xlsx.py"
+    python3 "${SCRIPT_DIR}/script/csv2xlsx.py" "$summary_csv"
+else
+    echo "Warning: Python3 not found, skipping XLSX conversion"
+fi
