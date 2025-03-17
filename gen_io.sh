@@ -98,40 +98,29 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     fi
 
     # 提取 IOPS 和 BW 的值
-    # 格式示例: "read: IOPS=7538, BW=233MiB/s (244MB/s)"
-    read_line=$(grep -A1 "Starting 1 thread" "$file" | grep "read: IOPS=")
-
-    # 提取IOPS
-    if [[ $read_line =~ IOPS=([0-9.]+) ]]; then
-        iops=${BASH_REMATCH[1]}
+    # IOPS格式可能是: "read: IOPS=7538" 或 "read: IOPS=7.5k"
+    iops_line=$(grep "read: IOPS=" "$file" || echo "")
+    if [[ $iops_line =~ IOPS=([0-9.]+)k ]]; then
+        # 如果是k单位，直接使用数值
+        kiops=${BASH_REMATCH[1]}
     else
-        iops=0
+        # 如果没有单位，需要除以1000
+        raw_iops=$(echo "$iops_line" | grep -oP 'IOPS=\K[0-9.]+' || echo "0")
+        kiops=$(echo "scale=2; $raw_iops / 1000" | bc)
     fi
 
-    # 转换IOPS到KIOPS
-    kiops=$(echo "scale=2; $iops / 1000" | bc)
+    # BW格式示例: "READ: bw=233MiB/s (244MB/s)"
+    bw=$(grep "READ: bw=" "$file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
+        grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
 
-    # 提取带宽值
-    if [[ $read_line =~ BW=([0-9.]+)MiB/s ]]; then
-        bw=${BASH_REMATCH[1]}
-    elif [[ $read_line =~ BW=([0-9.]+)MB/s ]]; then
-        # 如果是MB/s，转换为MiB/s
-        bw=$(echo "${BASH_REMATCH[1]} * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
-    else
-        bw=0
-    fi
-
-    # 提取测试时长
-    if [[ $read_line =~ /([0-9]+)msec ]]; then
-        test_duration=${BASH_REMATCH[1]}
-    else
-        test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
+    # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
+    if grep "READ: bw=" "$file" | grep -q 'MB/s'; then
+        bw=$(echo "$bw * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
     # 提取测试元数据
-    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' ||
-        basename "$(dirname "$file")" ||
-        echo "unknown")
+    test_timestamp=$(grep "TEST_METADATA:" "$file" | grep -oP 'TIMESTAMP=\K[^,]+' || echo "unknown")
+    test_duration=$(grep "run=" "$file" | grep -oP 'run=\K[0-9]+-[0-9]+' | cut -d'-' -f1 || echo "unknown")
 
     # 存储测试结果（确保每个字段都有值，即使是空值）
     result_line="$pattern,$algorithm,$cache_config,$vm_type,$kiops,$bw,$test_timestamp,$test_duration"
