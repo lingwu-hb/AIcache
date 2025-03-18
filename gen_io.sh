@@ -106,14 +106,14 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type" >>"$temp_csv"
 
     echo "Processing $file:"
-    echo "  Trace: $trace_name"
-    echo "  KIOPS: $kiops"
-    echo "  BW(MiB/s): $bw"
-    echo "  Timestamp: $test_timestamp"
-    echo "  Pattern: $pattern"
-    echo "  Algorithm: $algorithm"
-    echo "  VM Type: $vm_type"
-    echo "  Cache Size: $cache_sizes"
+    # echo "  Trace: $trace_name"
+    # echo "  KIOPS: $kiops"
+    # echo "  BW(MiB/s): $bw"
+    # echo "  Timestamp: $test_timestamp"
+    # echo "  Pattern: $pattern"
+    # echo "  Algorithm: $algorithm"
+    # echo "  VM Type: $vm_type"
+    # echo "  Cache Size: $cache_sizes"
 done
 
 # 对临时文件进行排序（按trace名称排序）
