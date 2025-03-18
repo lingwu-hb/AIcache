@@ -41,23 +41,32 @@ def append_results(new_xlsx, result_xlsx='result.xlsx'):
         # 读取现有的结果文件
         if os.path.exists(result_xlsx):
             result_df = pd.read_excel(result_xlsx)
-            # 保存原始的Trace列顺序和内容
-            original_traces = result_df['Trace'].tolist()
+            # 保存原始的Trace列及其顺序
+            original_df = result_df.copy()
             
             # 基于Trace列合并数据
             # how='left' 确保只保留原始文件中的行，并按原始顺序
             result_df = result_df.merge(new_data, on='Trace', how='left')
             
             # 对于新数据中存在但原始数据中不存在的Trace，添加新行
-            new_traces = new_data[~new_data['Trace'].isin(original_traces)]
+            new_traces = new_data[~new_data['Trace'].isin(result_df['Trace'])]
             if not new_traces.empty:
                 result_df = pd.concat([result_df, new_traces], ignore_index=True)
             
-            # 确保Trace列的顺序和内容与原始文件完全一致
-            result_df = pd.concat([
-                result_df[result_df['Trace'].isin(original_traces)].set_index('Trace').reindex(original_traces).reset_index(),
-                result_df[~result_df['Trace'].isin(original_traces)]
-            ]).reset_index(drop=True)
+            # 使用原始DataFrame的索引重新排序
+            # 创建一个映射字典，保存每个Trace值在原始DataFrame中的位置
+            original_positions = {trace: idx for idx, trace in enumerate(original_df['Trace'])}
+            
+            # 为新的Trace赋予较大的位置值，确保它们排在最后
+            max_pos = len(original_positions)
+            for trace in result_df['Trace']:
+                if trace not in original_positions:
+                    original_positions[trace] = max_pos
+                    max_pos += 1
+            
+            # 使用这个位置信息排序
+            result_df['_original_position'] = result_df['Trace'].map(original_positions)
+            result_df = result_df.sort_values('_original_position').drop('_original_position', axis=1)
         else:
             # 如果文件不存在，使用新数据创建
             result_df = new_data

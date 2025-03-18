@@ -94,8 +94,8 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
         grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
 
     # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
-    if grep "READ: bw=" "$file" | grep -q 'MB/s'; then
-        bw=$(echo "$bw * 0.95367431640625" | bc -l | awk '{printf "%.2f", $0}')
+    if grep "READ: bw=" "$file" | grep -q 'MiB/s'; then
+        bw=$(echo "$bw" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
     # 使用时间戳目录作为时间戳
