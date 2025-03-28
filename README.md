@@ -63,7 +63,7 @@ ${HOME_PATH}/AICache-tools/script/monitor.py CAS1
 ### 虚拟机配置
 
 - 虚拟机命名：`vmXX`（如：`vm01`）
-- IP 地址分配：`192.168.122.20X`（如：`192.168.122.201`）
+- IP 地址分配：`192.168.122.20X`（如：`192.168.122.201`）dd'd'dddd
 - 配置文件：`${VM_CONFIG_PATH}/vmXX.xml`
 - 运行时目录：`/var/run/vmXX`
 

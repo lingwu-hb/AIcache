@@ -53,11 +53,31 @@ declare -A replay_trace_config=(
 )
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
-find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
+find "$FIO_PATH" -mindepth 3 -maxdepth 3 -type d | while read -r timestamp_dir; do
+    # 检查是否是时间戳格式的目录（格式：MMDD_HHMM）
+    if [[ ! $(basename "$timestamp_dir") =~ ^[0-9]{4}_[0-9]{4}$ ]]; then
+        continue
+    fi
+
+    # 获取父目录（pattern_full目录）
+    pattern_dir=$(dirname "$timestamp_dir")
+    # 在同一个pattern_full目录下找到最新的时间戳目录
+    latest_timestamp_dir=$(find "$pattern_dir" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
+
+    # 如果当前目录不是最新的时间戳目录，跳过
+    if [ "$timestamp_dir" != "$latest_timestamp_dir" ]; then
+        continue
+    fi
+
+    # 检查fio_result.log是否存在
+    fio_result_file="$timestamp_dir/fio_result.log"
+    if [ ! -f "$fio_result_file" ]; then
+        continue
+    fi
+
     # 提取路径信息
-    dir_path=$(dirname "$(dirname "$file")")
-    pattern_full=$(basename "$dir_path")
-    timestamp_dir=$(basename "$(dirname "$file")")
+    pattern_full=$(basename "$pattern_dir")
+    timestamp_dir_name=$(basename "$timestamp_dir")
 
     # 提取算法名称（+号前的部分）和trace名称（+号后的部分）
     algorithm=${pattern_full%%+*}
@@ -73,13 +93,13 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
 
     # 如果没有找到对应的 Trace，跳过
     if [[ -z "$cache_sizes" ]]; then
-        echo "Warning: No cache size found for Trace $trace_name in $file"
+        echo "Warning: No cache size found for Trace $trace_name in $fio_result_file"
         continue
     fi
 
     # 提取 IOPS 和 BW 的值
     # IOPS格式可能是: "read: IOPS=7538" 或 "read: IOPS=7.5k"
-    iops_line=$(grep "read: IOPS=" "$file" || echo "")
+    iops_line=$(grep "read: IOPS=" "$fio_result_file" || echo "")
     if [[ $iops_line =~ IOPS=([0-9.]+)k ]]; then
         # 如果是k单位，直接使用数值
         kiops=${BASH_REMATCH[1]}
@@ -90,30 +110,21 @@ find "$FIO_PATH" -name "fio_result.log" | while read -r file; do
     fi
 
     # BW格式示例: "READ: bw=233MiB/s (244MB/s)"
-    bw=$(grep "READ: bw=" "$file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
-        grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
+    bw=$(grep "READ: bw=" "$fio_result_file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
+        grep "READ: bw=" "$fio_result_file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
 
     # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
-    if grep "READ: bw=" "$file" | grep -q 'MiB/s'; then
+    if grep "READ: bw=" "$fio_result_file" | grep -q 'MiB/s'; then
         bw=$(echo "$bw" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
     # 使用时间戳目录作为时间戳
-    test_timestamp=$timestamp_dir
+    test_timestamp=$timestamp_dir_name
 
     # 存储测试结果（按新格式存储）
-    # 直接写入临时文件，不使用关联数组
     echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type" >>"$temp_csv"
 
-    echo "Processing $file:"
-    # echo "  Trace: $trace_name"
-    # echo "  KIOPS: $kiops"
-    # echo "  BW(MiB/s): $bw"
-    # echo "  Timestamp: $test_timestamp"
-    # echo "  Pattern: $pattern"
-    # echo "  Algorithm: $algorithm"
-    # echo "  VM Type: $vm_type"
-    # echo "  Cache Size: $cache_sizes"
+    echo "Processing $fio_result_file:"
 done
 
 # 对临时文件进行排序（按trace名称排序）
