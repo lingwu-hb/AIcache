@@ -2,7 +2,7 @@
 # 示例路径：rawfio/no_prefetch+ali-dev-3.txt/0317_1905/fio_result.log
 # Source configuration
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-source ${SCRIPT_DIR}/script/config.sh
+source ${SCRIPT_DIR}/config.sh
 
 # 获取当前日期和时间（格式：YYYY-MM-DD_HH-MM-SS）
 timestamp=$(date +%Y-%m-%d_%H-%M-%S)
@@ -52,35 +52,28 @@ declare -A replay_trace_config=(
     ["ali-dev-5.txt"]="91"
 )
 
-# 遍历 result_dir 目录下的所有 pattern 目录
-find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r pattern_dir; do
-    # 获取pattern目录名
-    pattern_full=$(basename "$pattern_dir")
+# 遍历 result_dir 目录下的所有 fio_result.log 文件
+# 首先找到每个配置目录下最新的时间戳文件夹
+find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
+    # 获取最新的时间戳文件夹
+    latest_timestamp_dir=$(ls -td "$config_dir"/*/ 2>/dev/null | head -n1)
 
-    # 检查是否包含'+'号，确保是正确的pattern目录
-    if [[ ! "$pattern_full" =~ "+" ]]; then
-        continue
-    fi
-
-    # 在pattern目录下找到最新的时间戳目录
-    latest_timestamp_dir=$(ls -td "$pattern_dir"/*/ 2>/dev/null | head -n1)
-
-    # 如果没有找到时间戳目录，跳过
     if [ -z "$latest_timestamp_dir" ]; then
+        echo "Warning: No timestamp directories found in $config_dir"
         continue
     fi
 
-    # 去掉末尾的斜杠
-    latest_timestamp_dir=${latest_timestamp_dir%/}
-
-    # 检查fio_result.log是否存在
-    fio_result_file="$latest_timestamp_dir/fio_result.log"
-    if [ ! -f "$fio_result_file" ]; then
+    # 处理最新时间戳文件夹下的 fio_result.log
+    file="$latest_timestamp_dir/fio_result.log"
+    if [ ! -f "$file" ]; then
+        echo "Warning: No fio_result.log found in $latest_timestamp_dir"
         continue
     fi
 
-    # 提取时间戳目录名
-    timestamp_dir_name=$(basename "$latest_timestamp_dir")
+    # 提取路径信息
+    dir_path=$(dirname "$(dirname "$file")")
+    pattern_full=$(basename "$dir_path")
+    timestamp_dir=$(basename "$(dirname "$file")")
 
     # 提取算法名称（+号前的部分）和trace名称（+号后的部分）
     algorithm=${pattern_full%%+*}
@@ -96,13 +89,13 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r pattern_dir; do
 
     # 如果没有找到对应的 Trace，跳过
     if [[ -z "$cache_sizes" ]]; then
-        echo "Warning: No cache size found for Trace $trace_name in $fio_result_file"
+        echo "Warning: No cache size found for Trace $trace_name in $file"
         continue
     fi
 
     # 提取 IOPS 和 BW 的值
     # IOPS格式可能是: "read: IOPS=7538" 或 "read: IOPS=7.5k"
-    iops_line=$(grep "read: IOPS=" "$fio_result_file" || echo "")
+    iops_line=$(grep "read: IOPS=" "$file" || echo "")
     if [[ $iops_line =~ IOPS=([0-9.]+)k ]]; then
         # 如果是k单位，直接使用数值
         kiops=${BASH_REMATCH[1]}
@@ -113,21 +106,30 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r pattern_dir; do
     fi
 
     # BW格式示例: "READ: bw=233MiB/s (244MB/s)"
-    bw=$(grep "READ: bw=" "$fio_result_file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
-        grep "READ: bw=" "$fio_result_file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
+    bw=$(grep "READ: bw=" "$file" | grep -oP 'bw=\K[0-9.]+(?=MiB/s)' ||
+        grep "READ: bw=" "$file" | grep -oP '[0-9.]+(?=MB/s)' || echo "0")
 
     # 单位转换：BW默认单位是MiB/s或MB/s，统一使用MiB/s
-    if grep "READ: bw=" "$fio_result_file" | grep -q 'MiB/s'; then
+    if grep "READ: bw=" "$file" | grep -q 'MiB/s'; then
         bw=$(echo "$bw" | bc -l | awk '{printf "%.2f", $0}')
     fi
 
     # 使用时间戳目录作为时间戳
-    test_timestamp=$timestamp_dir_name
+    test_timestamp=$timestamp_dir
 
     # 存储测试结果（按新格式存储）
+    # 直接写入临时文件，不使用关联数组
     echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type" >>"$temp_csv"
 
-    echo "Processing $fio_result_file:"
+    echo "Processing $file:"
+    # echo "  Trace: $trace_name"
+    # echo "  KIOPS: $kiops"
+    # echo "  BW(MiB/s): $bw"
+    # echo "  Timestamp: $test_timestamp"
+    # echo "  Pattern: $pattern"
+    # echo "  Algorithm: $algorithm"
+    # echo "  VM Type: $vm_type"
+    # echo "  Cache Size: $cache_sizes"
 done
 
 # 对临时文件进行排序（按trace名称排序）
