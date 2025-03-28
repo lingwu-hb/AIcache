@@ -14,12 +14,22 @@ def append_columns(new_xlsx, result_xlsx='result.xlsx'):
         # 读取新的测试结果
         new_df = pd.read_excel(new_xlsx)
         
-        # 获取第一列的名称
+        # 获取第一列的名称（作为key列）
         key_column = new_df.columns[0]
+        
+        # 获取要追加的新列名（除了第一列外的所有列）
+        new_columns = new_df.columns[1:].tolist()
         
         # 读取现有的结果文件或创建新文件
         if os.path.exists(result_xlsx):
             result_df = pd.read_excel(result_xlsx)
+            
+            # 检查是否有重复的列名
+            duplicate_columns = set(new_columns) & set(result_df.columns)
+            if duplicate_columns:
+                print(f"Warning: Found duplicate columns: {duplicate_columns}")
+                print("These columns will be updated with new values")
+            
             # 保存原始的key列顺序
             original_keys = result_df[key_column].tolist()
             
@@ -51,7 +61,8 @@ def append_columns(new_xlsx, result_xlsx='result.xlsx'):
         # 保存结果
         result_df.to_excel(result_xlsx, index=False)
         print(f"Results appended to {result_xlsx}")
-        print(f"Added columns: {', '.join(new_df.columns[1:])}")
+        print(f"Key column: {key_column}")
+        print(f"Added/Updated columns: {', '.join(new_columns)}")
         
     except Exception as e:
         print(f"Error: {str(e)}")
