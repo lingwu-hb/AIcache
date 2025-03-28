@@ -33,11 +33,16 @@ def append_columns(new_xlsx, result_xlsx='result.xlsx'):
             # 保存原始的key列顺序
             original_keys = result_df[key_column].tolist()
             
+            # 重命名新数据中的key列，以避免合并时的冲突
+            new_df_renamed = new_df.copy()
+            new_df_renamed = new_df_renamed.rename(columns={key_column: '_temp_key'})
+            result_df = result_df.rename(columns={key_column: '_temp_key'})
+            
             # 合并数据，保持原有行的顺序
-            result_df = result_df.merge(new_df, on=key_column, how='left')
+            result_df = result_df.merge(new_df_renamed, on='_temp_key', how='left')
             
             # 添加新的行（如果有）
-            new_rows = new_df[~new_df[key_column].isin(original_keys)]
+            new_rows = new_df_renamed[~new_df_renamed['_temp_key'].isin(original_keys)]
             if not new_rows.empty:
                 result_df = pd.concat([result_df, new_rows], ignore_index=True)
             
@@ -47,12 +52,15 @@ def append_columns(new_xlsx, result_xlsx='result.xlsx'):
             max_pos = len(original_keys)
             
             # 为新key分配位置
-            result_df['_sort_key'] = result_df[key_column].apply(
+            result_df['_sort_key'] = result_df['_temp_key'].apply(
                 lambda x: position_map.get(x, max_pos + len(position_map))
             )
             
             # 排序并删除临时列
             result_df = result_df.sort_values('_sort_key').drop('_sort_key', axis=1)
+            
+            # 恢复key列名
+            result_df = result_df.rename(columns={'_temp_key': key_column})
             
         else:
             # 如果文件不存在，直接使用新数据
