@@ -25,16 +25,19 @@ replay_trace_config=(
 	"ali-dev-5.txt 91"
 	# "ali-dev-3.txt 8200" 
     "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-01"
-    
+    "ali-dev-3-part-02"
+    "ali-dev-3-part-03"
+    "ali-dev-3-part-04"
+    "ali-dev-3-part-05"
+    "ali-dev-3-part-06"
+    "ali-dev-3-part-07"
+    "ali-dev-3-part-08"
+    "ali-dev-3-part-09"
+    "ali-dev-3-part-10"
+    "ali-dev-3-part-11"
+    "ali-dev-3-part-12"
+    "ali-dev-3-part-13" # 每个part 100 0000个IO
 
-)
 
 # 算法配置(libdas.so)
 algo_config=(
@@ -43,6 +46,12 @@ algo_config=(
     # 可以根据需要添加更多的算法
 )
 
+spdk_branch=(
+    "baseline"
+    "lzq"
+    "hb"
+    "temp-merge"
+)
 # 虚拟机数量
 VM_COUNT=1
 
