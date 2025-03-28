@@ -6,29 +6,40 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
 source ${SCRIPT_DIR}/config.sh
 
+# 测试trace配置
 replay_trace_config=(
-	"mds_1.txt 4300"
-	# "proj_0.txt 91"
-	# "proj_3.txt 270"
-	# "prxy_0.txt 63"
-	# "rsrch_2.txt 68"
-	# "src1_2.txt 81"
+	# "mds_1.txt 4300"
+	"proj_0.txt 91"
+	"proj_3.txt 270"
+	"prxy_0.txt 63"
+	"rsrch_2.txt 68"
+	"src1_2.txt 81"
 	# "src2_1.txt 981"
 	"src2_2.txt 1040"
 	"stg_1.txt 4075"
-	# "ts_0.txt 51"
-	# "usr_0.txt 109"
-	# "web_0.txt 369"
-	# "web_1.txt 188"
-	# "prn_0.txt 193"
+	"ts_0.txt 51"
+	"usr_0.txt 109"
+	"web_0.txt 369"
+	"web_1.txt 188"
+	"prn_0.txt 193"
 	"ali-dev-5.txt 91"
-	"ali-dev-3.txt 8200"
+	# "ali-dev-3.txt 8200" 
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    "ali-dev-3-part-01"
+    
+
 )
 
 # 算法配置(libdas.so)
 algo_config=(
-    "das-bind"
-    "no_prefetch"
+    "das-bind" # cutinDas
+    # "no_prefetch"
     # 可以根据需要添加更多的算法
 )
 
@@ -64,7 +75,7 @@ for algo in "${algo_config[@]}"; do
         # 对于首次运行，不需要重载磁盘（因为start_vms_vfio.sh已经配置好了）
         echo -e "\n${INFO}调整cache size..."
         retry_count=0
-        max_retries=3
+        max_retries=2
         success=false
 
         while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
@@ -82,6 +93,9 @@ for algo in "${algo_config[@]}"; do
 
         if [ "$success" = false ]; then
             echo -e "\n${ERROR}调整cache size连续${max_retries}次失败"
+            # 重启：
+            ${SCRIPT_DIR}/stop_vms.sh 1
+            ${SCRIPT_DIR}/start_vms_vfio.sh $VM_COUNT "${algo_config[@]}" "$first_trace" "$first_cache"
             continue
         fi
 
@@ -89,7 +103,6 @@ for algo in "${algo_config[@]}"; do
         echo -e "${INFO} fio_vm_test.sh..."
         ${SCRIPT_DIR}/fio_vm_test.sh "$VM_COUNT" "$algo" "$trace_file" "$cache_size"
         test_status=$?
-
         # 清理缓存
         echo -e "${INFO} Drop cache..."
         echo 3 >/proc/sys/vm/drop_caches
@@ -108,9 +121,9 @@ done
 # ${SCRIPT_DIR}/stop_vms.sh
 
 # 生成测试报告
-if [[ -x "${SCRIPT_DIR}/parse_fio.py" ]]; then
-    echo "生成测试报告..."
-    python3 ${SCRIPT_DIR}/parse_fio.py
+if [[ -x "${SCRIPT_DIR}/gen_io.sh" ]]; then
+    echo -e "${INFO}生成csv..."
+    ${SCRIPT_DIR}/gen_io.sh
 fi
 
 echo "===== 批量测试结束 $(date) ====="
