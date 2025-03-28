@@ -52,32 +52,35 @@ declare -A replay_trace_config=(
     ["ali-dev-5.txt"]="91"
 )
 
-# 遍历 result_dir 目录下的所有 fio_result.log 文件
-find "$FIO_PATH" -mindepth 3 -maxdepth 3 -type d | while read -r timestamp_dir; do
-    # 检查是否是时间戳格式的目录（格式：MMDD_HHMM）
-    if [[ ! $(basename "$timestamp_dir") =~ ^[0-9]{4}_[0-9]{4}$ ]]; then
+# 遍历 result_dir 目录下的所有 pattern 目录
+find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r pattern_dir; do
+    # 获取pattern目录名
+    pattern_full=$(basename "$pattern_dir")
+
+    # 检查是否包含'+'号，确保是正确的pattern目录
+    if [[ ! "$pattern_full" =~ "+" ]]; then
         continue
     fi
 
-    # 获取父目录（pattern_full目录）
-    pattern_dir=$(dirname "$timestamp_dir")
-    # 在同一个pattern_full目录下找到最新的时间戳目录
-    latest_timestamp_dir=$(find "$pattern_dir" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)
+    # 在pattern目录下找到最新的时间戳目录
+    latest_timestamp_dir=$(ls -td "$pattern_dir"/*/ 2>/dev/null | head -n1)
 
-    # 如果当前目录不是最新的时间戳目录，跳过
-    if [ "$timestamp_dir" != "$latest_timestamp_dir" ]; then
+    # 如果没有找到时间戳目录，跳过
+    if [ -z "$latest_timestamp_dir" ]; then
         continue
     fi
+
+    # 去掉末尾的斜杠
+    latest_timestamp_dir=${latest_timestamp_dir%/}
 
     # 检查fio_result.log是否存在
-    fio_result_file="$timestamp_dir/fio_result.log"
+    fio_result_file="$latest_timestamp_dir/fio_result.log"
     if [ ! -f "$fio_result_file" ]; then
         continue
     fi
 
-    # 提取路径信息
-    pattern_full=$(basename "$pattern_dir")
-    timestamp_dir_name=$(basename "$timestamp_dir")
+    # 提取时间戳目录名
+    timestamp_dir_name=$(basename "$latest_timestamp_dir")
 
     # 提取算法名称（+号前的部分）和trace名称（+号后的部分）
     algorithm=${pattern_full%%+*}
