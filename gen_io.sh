@@ -88,15 +88,22 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
     pattern="unknown"
     cache_config="unknown"
 
-    # 获取对应的缓存大小 - 增加模式匹配支持
-    if [[ $trace_name =~ ^ali-dev-3-part-[0-9]$ ]]; then
-        # 如果是分片文件，使用通用配置
-        cache_sizes="683"
+    # 从文件末尾的 TEST_METADATA 标签中获取 cache_size 和时间戳
+    metadata_line=$(grep "TEST_METADATA:" "$file" || echo "")
+    if [[ $metadata_line =~ CACHE_SIZE=([0-9]+),\ *TIMESTAMP=([0-9_]+) ]]; then
+        cache_sizes="${BASH_REMATCH[1]}"
+        test_timestamp="${BASH_REMATCH[2]}"
     else
-        cache_sizes=${replay_trace_config[$trace_name]}
+        # 如果没有找到 metadata，使用原来的方式作为备选
+        if [[ $trace_name =~ ^ali-dev-3-part-[0-9]$ ]]; then
+            cache_sizes="683"
+        else
+            cache_sizes=${replay_trace_config[$trace_name]}
+        fi
+        test_timestamp=$timestamp_dir
     fi
 
-    # 如果没有找到对应的 Trace，跳过
+    # 如果没有找到对应的 cache_size，跳过
     if [[ -z "$cache_sizes" ]]; then
         echo "Warning: No cache size found for Trace $trace_name in $file"
         continue
