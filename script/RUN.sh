@@ -51,7 +51,9 @@ VM_COUNT=1
 
 # 日志设置
 log_file="${LOG_PATH}/RUN_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$log_file") 2>&1
+# 同时将输出发送到终端和日志文件
+exec 1> >(tee -a "${log_file}")
+exec 2> >(tee -a "${log_file}" >&2)
 
 echo "========== $(date) =========="
 

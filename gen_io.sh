@@ -50,7 +50,7 @@ declare -A replay_trace_config=(
     ["proj_2.txt"]="20990"
     ["ali-dev-3.txt"]="8400"
     ["ali-dev-5.txt"]="91"
-    ["ali-dev-3-part-*.txt"]="683"
+    ["ali-dev-3-part-*"]="683"
 )
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
@@ -89,7 +89,7 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
     cache_config="unknown"
 
     # 获取对应的缓存大小 - 增加模式匹配支持
-    if [[ $trace_name =~ ^ali-dev-3-part-[0-9]+\.txt$ ]]; then
+    if [[ $trace_name =~ ^ali-dev-3-part-[0-9]$ ]]; then
         # 如果是分片文件，使用通用配置
         cache_sizes="683"
     else
