@@ -13,18 +13,18 @@ replay_trace_config=(
 	# "proj_3.txt 270"
 	# "prxy_0.txt 63"
 	# "rsrch_2.txt 68"
-	"src1_2.txt 81"
-	"src2_1.txt 981"
-	"src2_2.txt 1040"
+	# "src1_2.txt 81"
+	# "src2_1.txt 981"
+	# "src2_2.txt 1040"
 	# "stg_1.txt 4075"
 	# "ts_0.txt 51"
 	# "usr_0.txt 109"
 	# "web_0.txt 369"
 	# "web_1.txt 188"
 	# "prn_0.txt 193"
-	"ali-dev-5.txt 91"
+	# "ali-dev-5.txt 91"
 	# "ali-dev-3.txt 8200" 
-    "ali-dev-3-part-01 683"
+    # "ali-dev-3-part-01 683"
     "ali-dev-3-part-02 683"
     "ali-dev-3-part-03 683"
     "ali-dev-3-part-04 683"
@@ -34,8 +34,8 @@ replay_trace_config=(
     "ali-dev-3-part-08 683"
     "ali-dev-3-part-09 683"
     "ali-dev-3-part-10 683"
-    "ali-dev-3-part-11 683"
-    "ali-dev-3-part-12 683" # 每个part 100 0000个IO
+    # "ali-dev-3-part-11 683"
+    # "ali-dev-3-part-12 683" # 每个part 100 0000个IO
 )
 
 # 算法配置(libdas.so)
