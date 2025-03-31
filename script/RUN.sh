@@ -8,40 +8,39 @@ source ${SCRIPT_DIR}/config.sh
 
 # 测试trace配置
 replay_trace_config=(
-    # "mds_1.txt 4300"
-    "proj_0.txt 91"
-    "proj_3.txt 270"
-    "prxy_0.txt 63"
-    "rsrch_2.txt 68"
-    "src1_2.txt 81"
-    # "src2_1.txt 981"
-    "src2_2.txt 1040"
-    "stg_1.txt 4075"
-    "ts_0.txt 51"
-    "usr_0.txt 109"
-    "web_0.txt 369"
-    "web_1.txt 188"
-    "prn_0.txt 193"
-    "ali-dev-5.txt 91"
-    # "ali-dev-3.txt 8200"
-    "ali-dev-3-part-01"
-    "ali-dev-3-part-02"
-    "ali-dev-3-part-03"
-    "ali-dev-3-part-04"
-    "ali-dev-3-part-05"
-    "ali-dev-3-part-06"
-    "ali-dev-3-part-07"
-    "ali-dev-3-part-08"
-    "ali-dev-3-part-09"
-    "ali-dev-3-part-10"
-    "ali-dev-3-part-11"
-    "ali-dev-3-part-12"
-    "ali-dev-3-part-13" # 每个part 100 0000个IO
+	# "mds_1.txt 4300"
+	# "proj_0.txt 91"
+	# "proj_3.txt 270"
+	# "prxy_0.txt 63"
+	# "rsrch_2.txt 68"
+	"src1_2.txt 81"
+	"src2_1.txt 981"
+	"src2_2.txt 1040"
+	# "stg_1.txt 4075"
+	# "ts_0.txt 51"
+	# "usr_0.txt 109"
+	# "web_0.txt 369"
+	# "web_1.txt 188"
+	# "prn_0.txt 193"
+	"ali-dev-5.txt 91"
+	# "ali-dev-3.txt 8200" 
+    "ali-dev-3-part-01 683"
+    "ali-dev-3-part-02 683"
+    "ali-dev-3-part-03 683"
+    "ali-dev-3-part-04 683"
+    "ali-dev-3-part-05 683"
+    "ali-dev-3-part-06 683"
+    "ali-dev-3-part-07 683"
+    "ali-dev-3-part-08 683"
+    "ali-dev-3-part-09 683"
+    "ali-dev-3-part-10 683"
+    "ali-dev-3-part-11 683"
+    "ali-dev-3-part-12 683" # 每个part 100 0000个IO
 )
 
 # 算法配置(libdas.so)
 algo_config=(
-    "das-bind" # cutinDas
+    "das-bind" #! cutinDas并没有新开,注意覆盖问题
     # "no_prefetch"
     # 可以根据需要添加更多的算法
 )
@@ -54,6 +53,7 @@ log_file="${LOG_PATH}/RUN_$(date +%Y%m%d_%H%M%S).log"
 # 同时将输出发送到终端和日志文件
 exec 1> >(tee -a "${log_file}")
 exec 2> >(tee -a "${log_file}" >&2)
+
 
 echo "========== $(date) =========="
 
