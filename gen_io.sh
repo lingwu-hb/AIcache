@@ -50,16 +50,20 @@ declare -A replay_trace_config=(
     ["proj_2.txt"]="20990"
     ["ali-dev-3.txt"]="8400"
     ["ali-dev-5.txt"]="91"
+    ["ali-dev-3-part-*.txt"]="683"
 )
 
 # 遍历 result_dir 目录下的所有 fio_result.log 文件
 # 首先找到每个配置目录下最新的时间戳文件夹
 find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
-    # 获取最新的时间戳文件夹
-    latest_timestamp_dir=$(ls -td "$config_dir"/*/ 2>/dev/null | head -n1)
+    # 获取配置目录的父目录（去掉时间戳部分）
+    base_config_dir=$(dirname "$config_dir")
+
+    # 在父目录下获取最新的时间戳文件夹
+    latest_timestamp_dir=$(ls -td "$base_config_dir"/*/ 2>/dev/null | head -n1)
 
     if [ -z "$latest_timestamp_dir" ]; then
-        echo "Warning: No timestamp directories found in $config_dir"
+        echo "Warning: No timestamp directories found in $base_config_dir"
         continue
     fi
 
@@ -84,8 +88,13 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
     pattern="unknown"
     cache_config="unknown"
 
-    # 获取对应的缓存大小
-    cache_sizes=${replay_trace_config[$trace_name]}
+    # 获取对应的缓存大小 - 增加模式匹配支持
+    if [[ $trace_name =~ ^ali-dev-3-part-[0-9]+\.txt$ ]]; then
+        # 如果是分片文件，使用通用配置
+        cache_sizes="683"
+    else
+        cache_sizes=${replay_trace_config[$trace_name]}
+    fi
 
     # 如果没有找到对应的 Trace，跳过
     if [[ -z "$cache_sizes" ]]; then
