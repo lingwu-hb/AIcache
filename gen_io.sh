@@ -77,7 +77,6 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
     # 提取路径信息
     dir_path=$(dirname "$(dirname "$file")")
     pattern_full=$(basename "$dir_path")
-    timestamp_dir=$(basename "$(dirname "$file")")
 
     # 提取算法名称（+号前的部分）和trace名称（+号后的部分）
     algorithm=${pattern_full%%+*}
@@ -100,7 +99,9 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
         else
             cache_sizes=${replay_trace_config[$trace_name]}
         fi
-        test_timestamp=$timestamp_dir
+        # 如果没有找到metadata中的时间戳，使用目录名作为时间戳
+        test_timestamp=$(basename "$(dirname "$file")")
+        echo -e "\033[31mWarning: 在fio result末行未找到信息 $trace_name in $file，使用目录名作为时间戳\033[0m"
     fi
 
     # 如果没有找到对应的 cache_size，跳过
@@ -135,7 +136,7 @@ find "$FIO_PATH" -mindepth 2 -maxdepth 2 -type d | while read -r config_dir; do
 
     # 存储测试结果（按新格式存储）
     # 直接写入临时文件，不使用关联数组
-    echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$pattern,$algorithm,$vm_type" >>"$temp_csv"
+    echo "$trace_name,$cache_sizes,$kiops,$bw,$test_timestamp,$spdk_branch,$das_version" >>"$temp_csv"
 
     echo "Processing $file:"
     # echo "  Trace: $trace_name"
